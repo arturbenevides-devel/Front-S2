@@ -1,0 +1,210 @@
+import { Conversation, AISuggestion, TravelPackage } from '@/types/crm';
+
+export const mockConversations: Conversation[] = [
+  {
+    id: '1',
+    contact: {
+      id: 'c1',
+      name: 'Maria Silva',
+      phone: '+55 11 99999-1234',
+      status: 'online',
+      tags: ['VIP', 'Frequente'],
+    },
+    lastMessage: 'Olá! Gostaria de saber sobre pacotes para Cancun',
+    lastMessageTime: '10:30',
+    unreadCount: 2,
+    category: 'lead',
+    messages: [
+      {
+        id: 'm1',
+        conversationId: '1',
+        content: 'Olá! Gostaria de saber sobre pacotes para Cancun',
+        timestamp: '10:30',
+        sender: 'contact',
+        type: 'text',
+      },
+      {
+        id: 'm2',
+        conversationId: '1',
+        content: 'Estou pensando em viajar em Janeiro com minha família, 4 pessoas.',
+        timestamp: '10:31',
+        sender: 'contact',
+        type: 'text',
+      },
+    ],
+  },
+  {
+    id: '2',
+    contact: {
+      id: 'c2',
+      name: 'João Santos',
+      phone: '+55 21 98888-5678',
+      status: 'offline',
+      lastSeen: 'Visto por último às 09:45',
+      tags: ['Corporativo'],
+    },
+    lastMessage: 'Perfeito! Vou aguardar o orçamento então.',
+    lastMessageTime: '09:45',
+    unreadCount: 0,
+    category: 'booking',
+    messages: [
+      {
+        id: 'm3',
+        conversationId: '2',
+        content: 'Bom dia! Preciso de passagens para São Paulo, dia 15/02.',
+        timestamp: '09:30',
+        sender: 'contact',
+        type: 'text',
+      },
+      {
+        id: 'm4',
+        conversationId: '2',
+        content: 'Bom dia João! Vou verificar as melhores opções para você.',
+        timestamp: '09:35',
+        sender: 'user',
+        type: 'text',
+        status: 'read',
+      },
+      {
+        id: 'm5',
+        conversationId: '2',
+        content: 'Perfeito! Vou aguardar o orçamento então.',
+        timestamp: '09:45',
+        sender: 'contact',
+        type: 'text',
+      },
+    ],
+  },
+  {
+    id: '3',
+    contact: {
+      id: 'c3',
+      name: 'Ana Oliveira',
+      phone: '+55 31 97777-9012',
+      status: 'away',
+      tags: ['Lua de Mel'],
+    },
+    lastMessage: 'Vocês têm pacotes para Maldivas?',
+    lastMessageTime: 'Ontem',
+    unreadCount: 1,
+    category: 'lead',
+    messages: [
+      {
+        id: 'm6',
+        conversationId: '3',
+        content: 'Oi! Estou planejando minha lua de mel 🥰',
+        timestamp: 'Ontem 18:30',
+        sender: 'contact',
+        type: 'text',
+      },
+      {
+        id: 'm7',
+        conversationId: '3',
+        content: 'Vocês têm pacotes para Maldivas?',
+        timestamp: 'Ontem 18:31',
+        sender: 'contact',
+        type: 'text',
+      },
+    ],
+  },
+  {
+    id: '4',
+    contact: {
+      id: 'c4',
+      name: 'Carlos Mendes',
+      phone: '+55 41 96666-3456',
+      status: 'online',
+    },
+    lastMessage: 'Obrigado pelo atendimento!',
+    lastMessageTime: 'Ontem',
+    unreadCount: 0,
+    category: 'support',
+    messages: [
+      {
+        id: 'm8',
+        conversationId: '4',
+        content: 'Consegui resolver minha dúvida sobre o seguro viagem.',
+        timestamp: 'Ontem 15:20',
+        sender: 'contact',
+        type: 'text',
+      },
+      {
+        id: 'm9',
+        conversationId: '4',
+        content: 'Obrigado pelo atendimento!',
+        timestamp: 'Ontem 15:21',
+        sender: 'contact',
+        type: 'text',
+      },
+    ],
+  },
+  {
+    id: '5',
+    contact: {
+      id: 'c5',
+      name: 'Fernanda Costa',
+      phone: '+55 51 95555-7890',
+      status: 'offline',
+      lastSeen: 'Visto por último há 2 dias',
+    },
+    lastMessage: 'Vou pensar e retorno amanhã',
+    lastMessageTime: 'Seg',
+    unreadCount: 0,
+    category: 'followup',
+    messages: [
+      {
+        id: 'm10',
+        conversationId: '5',
+        content: 'Vou pensar e retorno amanhã',
+        timestamp: 'Segunda 14:00',
+        sender: 'contact',
+        type: 'text',
+      },
+    ],
+  },
+];
+
+export const mockAISuggestions: AISuggestion[] = [
+  {
+    id: 's1',
+    type: 'response',
+    title: 'Resposta Sugerida',
+    content: 'Olá Maria! Temos ótimos pacotes para Cancun em Janeiro. Para 4 pessoas, temos opções a partir de R$ 12.500 com hospedagem all-inclusive. Posso enviar mais detalhes?',
+    confidence: 95,
+  },
+  {
+    id: 's2',
+    type: 'info',
+    title: 'Informação do Cliente',
+    content: 'Maria é cliente VIP com 3 viagens anteriores. Preferência por resorts all-inclusive.',
+    confidence: 100,
+  },
+  {
+    id: 's3',
+    type: 'action',
+    title: 'Enviar Catálogo',
+    content: 'Enviar catálogo de pacotes Cancun 2024 com preços promocionais',
+    confidence: 88,
+  },
+];
+
+export const mockPackages: TravelPackage[] = [
+  {
+    id: 'p1',
+    destination: 'Cancun, México',
+    price: 12500,
+    duration: '7 noites',
+  },
+  {
+    id: 'p2',
+    destination: 'Maldivas',
+    price: 28000,
+    duration: '5 noites',
+  },
+  {
+    id: 'p3',
+    destination: 'Paris, França',
+    price: 15800,
+    duration: '6 noites',
+  },
+];
