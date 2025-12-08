@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format, startOfDay, endOfDay, subDays, subWeeks, subMonths, isWithinInterval } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   AlertTriangle, 
   Eye, 
@@ -15,9 +20,11 @@ import {
   Calendar,
   User,
   Clock,
-  Filter
+  Filter,
+  CalendarDays,
+  X
 } from 'lucide-react';
-import { DismissedActivityReport, Conversation, CustomerTask } from '@/types/crm';
+import { DismissedActivityReport, Conversation, CustomerTask, DismissType } from '@/types/crm';
 import { cn } from '@/lib/utils';
 
 interface SupervisionPanelProps {
@@ -27,6 +34,9 @@ interface SupervisionPanelProps {
   onViewConversation: (conversationId: string) => void;
 }
 
+type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'custom';
+type DismissTypeFilter = 'all' | 'permanent' | 'later';
+
 export function SupervisionPanel({ 
   conversations, 
   tasks, 
@@ -34,6 +44,55 @@ export function SupervisionPanel({
   onViewConversation 
 }: SupervisionPanelProps) {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [dismissTypeFilter, setDismissTypeFilter] = useState<DismissTypeFilter>('all');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+  // Calculate date range based on period filter
+  const getDateRange = useMemo(() => {
+    const now = new Date();
+    const end = endOfDay(now);
+    
+    switch (periodFilter) {
+      case 'today':
+        return { start: startOfDay(now), end };
+      case 'week':
+        return { start: startOfDay(subWeeks(now, 1)), end };
+      case 'month':
+        return { start: startOfDay(subMonths(now, 1)), end };
+      case 'custom':
+        return customDateRange.from && customDateRange.to
+          ? { start: startOfDay(customDateRange.from), end: endOfDay(customDateRange.to) }
+          : null;
+      default:
+        return null;
+    }
+  }, [periodFilter, customDateRange]);
+
+  // Filter reports by all criteria
+  const filteredReports = useMemo(() => {
+    return dismissedReports.filter(report => {
+      // Filter by agent
+      if (selectedAgent && report.agentName !== selectedAgent) return false;
+      
+      // Filter by dismiss type
+      if (dismissTypeFilter !== 'all' && report.dismissType !== dismissTypeFilter) return false;
+      
+      // Filter by date range
+      if (getDateRange) {
+        const reportDate = new Date(report.dismissedAt);
+        if (!isWithinInterval(reportDate, { start: getDateRange.start, end: getDateRange.end })) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [dismissedReports, selectedAgent, dismissTypeFilter, getDateRange]);
 
   // Calculate conversations without future tasks
   const conversationsWithoutTasks = useMemo(() => {
@@ -47,11 +106,11 @@ export function SupervisionPanel({
     return conversations.filter(c => !conversationIdsWithFutureTasks.has(c.id));
   }, [conversations, tasks]);
 
-  // Calculate agent statistics
+  // Calculate agent statistics from filtered reports
   const agentStats = useMemo(() => {
     const stats: Record<string, { total: number; permanent: number; later: number }> = {};
     
-    dismissedReports.forEach(report => {
+    filteredReports.forEach(report => {
       if (!stats[report.agentName]) {
         stats[report.agentName] = { total: 0, permanent: 0, later: 0 };
       }
@@ -67,11 +126,30 @@ export function SupervisionPanel({
       agentName: name,
       ...data
     }));
-  }, [dismissedReports]);
+  }, [filteredReports]);
 
-  const filteredReports = selectedAgent
-    ? dismissedReports.filter(r => r.agentName === selectedAgent)
-    : dismissedReports;
+  // Stats from filtered data
+  const filteredStats = useMemo(() => ({
+    total: filteredReports.length,
+    permanent: filteredReports.filter(r => r.dismissType === 'permanent').length,
+    later: filteredReports.filter(r => r.dismissType === 'later').length
+  }), [filteredReports]);
+
+  const hasActiveFilters = periodFilter !== 'all' || dismissTypeFilter !== 'all' || selectedAgent !== null;
+
+  const clearAllFilters = () => {
+    setPeriodFilter('all');
+    setDismissTypeFilter('all');
+    setSelectedAgent(null);
+    setCustomDateRange({ from: undefined, to: undefined });
+  };
+
+  const handlePeriodChange = (value: PeriodFilter) => {
+    setPeriodFilter(value);
+    if (value !== 'custom') {
+      setCustomDateRange({ from: undefined, to: undefined });
+    }
+  };
 
   return (
     <div className="flex-1 p-6 overflow-hidden bg-muted/20">
@@ -88,6 +166,109 @@ export function SupervisionPanel({
             </p>
           </div>
         </div>
+
+        {/* Filters */}
+        <Card className="border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filtros:</span>
+              </div>
+              
+              {/* Period Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Período:</span>
+                <Select value={periodFilter} onValueChange={(v) => handlePeriodChange(v as PeriodFilter)}>
+                  <SelectTrigger className="w-[140px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="week">Última Semana</SelectItem>
+                    <SelectItem value="month">Último Mês</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom Date Range */}
+              {periodFilter === 'custom' && (
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-2">
+                      <CalendarDays className="w-4 h-4" />
+                      {customDateRange.from ? (
+                        customDateRange.to ? (
+                          <>
+                            {format(customDateRange.from, 'dd/MM/yy')} - {format(customDateRange.to, 'dd/MM/yy')}
+                          </>
+                        ) : (
+                          format(customDateRange.from, 'dd/MM/yyyy')
+                        )
+                      ) : (
+                        'Selecionar datas'
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="range"
+                      selected={{ from: customDateRange.from, to: customDateRange.to }}
+                      onSelect={(range) => {
+                        setCustomDateRange({ from: range?.from, to: range?.to });
+                        if (range?.from && range?.to) {
+                          setIsCalendarOpen(false);
+                        }
+                      }}
+                      numberOfMonths={2}
+                      locale={ptBR}
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              {/* Dismiss Type Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Tipo:</span>
+                <Select value={dismissTypeFilter} onValueChange={(v) => setDismissTypeFilter(v as DismissTypeFilter)}>
+                  <SelectTrigger className="w-[140px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="permanent">Permanentes</SelectItem>
+                    <SelectItem value="later">Temporárias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearAllFilters}
+                  className="h-9 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Limpar filtros
+                </Button>
+              )}
+
+              {/* Active Filters Summary */}
+              {hasActiveFilters && (
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Exibindo {filteredReports.length} de {dismissedReports.length} registros
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -109,7 +290,7 @@ export function SupervisionPanel({
                 <ClipboardX className="w-5 h-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{dismissedReports.length}</p>
+                <p className="text-2xl font-bold">{filteredStats.total}</p>
                 <p className="text-sm text-muted-foreground">Registros Dispensados</p>
               </div>
             </CardContent>
@@ -121,9 +302,7 @@ export function SupervisionPanel({
                 <TrendingDown className="w-5 h-5 text-orange-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {dismissedReports.filter(r => r.dismissType === 'permanent').length}
-                </p>
+                <p className="text-2xl font-bold">{filteredStats.permanent}</p>
                 <p className="text-sm text-muted-foreground">Dispensas Permanentes</p>
               </div>
             </CardContent>
@@ -177,7 +356,7 @@ export function SupervisionPanel({
                       onClick={() => setSelectedAgent(null)}
                     >
                       <Filter className="w-4 h-4 mr-2" />
-                      Limpar Filtro
+                      Limpar Filtro de Agente
                     </Button>
                   )}
                 </div>
@@ -355,6 +534,7 @@ export function SupervisionPanel({
                 <CardTitle className="text-lg">Estatísticas por Agente</CardTitle>
                 <CardDescription>
                   Resumo de dispensas de registro por cada agente
+                  {hasActiveFilters && ' (filtros aplicados)'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden p-0">
