@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe } from 'lucide-react';
+import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,12 @@ const mockTransfers: TransferRequest[] = [
   { id: '2', from: 'Carlos Silva', to: 'Maria Santos', customer: 'Juliana Costa', reason: 'Especialista em cruzeiros', timestamp: new Date(Date.now() - 3600000) },
 ];
 
-export function AdminPanel() {
+interface AdminPanelProps {
+  gamificationEnabled?: boolean;
+  onGamificationToggle?: (enabled: boolean) => void;
+}
+
+export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }: AdminPanelProps) {
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>(mockAgents);
   const [transfers] = useState<TransferRequest[]>(mockTransfers);
@@ -83,6 +88,16 @@ export function AdminPanel() {
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [newAgent, setNewAgent] = useState<{ name: string; email: string; role: 'admin' | 'agent' | 'supervisor' }>({ name: '', email: '', role: 'agent' });
   const [agencySettings, setAgencySettings] = useState<AgencySettings>(defaultAgencySettings);
+
+  const handleGamificationToggle = (enabled: boolean) => {
+    onGamificationToggle?.(enabled);
+    toast({
+      title: enabled ? 'Gamificação Ativada' : 'Gamificação Desativada',
+      description: enabled 
+        ? 'O sistema de gamificação está ativo para todos os agentes.'
+        : 'O sistema de gamificação foi desativado.',
+    });
+  };
 
   const handleAddAgent = () => {
     const agent: Agent = {
@@ -703,6 +718,79 @@ export function AdminPanel() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          {/* Gamification Settings */}
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gamepad2 className="h-5 w-5 text-primary" />
+                Gamificação
+              </CardTitle>
+              <CardDescription>
+                Sistema de níveis, badges, ranking e desafios para a equipe
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl ${gamificationEnabled ? 'bg-primary/10' : 'bg-muted'}`}>
+                    <Trophy className={`h-5 w-5 ${gamificationEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Habilitar Gamificação</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ativa rankings, badges, XP e desafios diários
+                    </p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={gamificationEnabled} 
+                  onCheckedChange={handleGamificationToggle}
+                />
+              </div>
+
+              {gamificationEnabled && (
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">🏆</span>
+                      <span className="font-medium text-foreground">Rankings</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Competição saudável entre a equipe com ranking diário, semanal e mensal
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">🎖️</span>
+                      <span className="font-medium text-foreground">Badges</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Conquistas desbloqueáveis por metas de vendas, velocidade e satisfação
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">⚡</span>
+                      <span className="font-medium text-foreground">XP & Níveis</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Progressão com pontos de experiência por atividades realizadas
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">🎯</span>
+                      <span className="font-medium text-foreground">Desafios</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Metas diárias com recompensas em XP para motivar a equipe
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
