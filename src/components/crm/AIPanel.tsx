@@ -213,51 +213,53 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
         </div>
       </div>
 
-      {/* AI Toggle */}
-      <div className="border-b border-border p-3 space-y-2">
-        <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-          <div className="flex items-center gap-2">
-            <Power className={cn("h-4 w-4", aiEnabled ? "text-success" : "text-muted-foreground")} />
-            <Label htmlFor="ai-toggle" className="text-sm font-medium cursor-pointer">
-              IA para {conversation.contact.name.split(' ')[0]}
-            </Label>
-          </div>
-          <Switch
-            id="ai-toggle"
-            checked={aiEnabled}
-            onCheckedChange={onToggleAI}
-          />
-        </div>
-        
-        {/* Autopilot Toggle */}
-        <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-3 border border-primary/20">
-          <div className="flex items-center gap-2">
-            <Zap className={cn("h-4 w-4", autopilotEnabled ? "text-warning animate-pulse" : "text-muted-foreground")} />
-            <div>
-              <Label htmlFor="autopilot-toggle" className="text-sm font-medium cursor-pointer">
-                Piloto Automático
+      {/* AI Toggle & Autopilot - Side by Side */}
+      <div className="border-b border-border p-2">
+        <div className="flex gap-2">
+          {/* AI Toggle */}
+          <div className="flex-1 flex items-center justify-between rounded-lg bg-muted/50 px-2 py-1.5">
+            <div className="flex items-center gap-1.5">
+              <Power className={cn("h-3.5 w-3.5", aiEnabled ? "text-success" : "text-muted-foreground")} />
+              <Label htmlFor="ai-toggle" className="text-xs font-medium cursor-pointer">
+                IA
               </Label>
-              <p className="text-xs text-muted-foreground">IA responde diretamente</p>
             </div>
+            <Switch
+              id="ai-toggle"
+              checked={aiEnabled}
+              onCheckedChange={onToggleAI}
+              className="scale-90"
+            />
           </div>
-          <Switch
-            id="autopilot-toggle"
-            checked={autopilotEnabled}
-            onCheckedChange={(checked) => {
-              setAutopilotEnabled(checked);
-              if (checked) {
-                onToggleAI(true);
-                toast({
-                  title: "Piloto Automático Ativado",
-                  description: "A IA responderá automaticamente aos clientes.",
-                });
-              }
-            }}
-          />
+          
+          {/* Autopilot Toggle */}
+          <div className="flex-1 flex items-center justify-between rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 px-2 py-1.5 border border-primary/20">
+            <div className="flex items-center gap-1.5">
+              <Zap className={cn("h-3.5 w-3.5", autopilotEnabled ? "text-warning animate-pulse" : "text-muted-foreground")} />
+              <Label htmlFor="autopilot-toggle" className="text-xs font-medium cursor-pointer">
+                Auto
+              </Label>
+            </div>
+            <Switch
+              id="autopilot-toggle"
+              checked={autopilotEnabled}
+              onCheckedChange={(checked) => {
+                setAutopilotEnabled(checked);
+                if (checked) {
+                  onToggleAI(true);
+                  toast({
+                    title: "Piloto Automático Ativado",
+                    description: "A IA responderá automaticamente aos clientes.",
+                  });
+                }
+              }}
+              className="scale-90"
+            />
+          </div>
         </div>
 
         {/* Tag Manager */}
-        <div className="border-b border-border p-3">
+        <div className="mt-2">
           <TagManager
             tags={conversation.contact.tags || []}
             onTagsChange={(tags) => onUpdateTags?.(conversation.id, tags)}
@@ -266,74 +268,64 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'suggestions' | 'chat')} className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="mx-4 mt-3 grid grid-cols-2">
-          <TabsTrigger value="suggestions" className="gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" />
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'suggestions' | 'chat')} className="flex-1 flex flex-col min-h-0">
+        <TabsList className="mx-3 mt-2 grid grid-cols-2 shrink-0">
+          <TabsTrigger value="suggestions" className="gap-1.5 text-xs">
+            <Sparkles className="h-3 w-3" />
             Sugestões
           </TabsTrigger>
-          <TabsTrigger value="chat" className="gap-1.5">
-            <MessageCircle className="h-3.5 w-3.5" />
+          <TabsTrigger value="chat" className="gap-1.5 text-xs">
+            <MessageCircle className="h-3 w-3" />
             Chat IA
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="suggestions" className="flex-1 overflow-hidden m-0 p-0">
-          <div className="flex-1 overflow-y-auto p-4 scrollbar-thin h-full">
+        <TabsContent value="suggestions" className="flex-1 overflow-hidden m-0 p-0 min-h-0">
+          <div className="overflow-y-auto p-3 scrollbar-thin h-full">
             {/* AI Status */}
-            <div className="mb-4 rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-3">
+            <div className="mb-3 rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-2">
               <div className="flex items-center gap-2">
                 <div className={cn(
                   'h-2 w-2 rounded-full',
                   aiEnabled ? 'bg-success animate-pulse-soft' : 'bg-muted-foreground'
                 )} />
-                <span className="text-sm font-medium text-foreground">
-                  {isAnalyzing ? 'Analisando contexto...' : aiEnabled ? 'Análise concluída' : 'IA desativada'}
+                <span className="text-xs font-medium text-foreground">
+                  {isAnalyzing ? 'Analisando...' : aiEnabled ? 'Análise concluída' : 'IA desativada'}
                 </span>
               </div>
-              {aiEnabled && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Cliente interessado em viagem familiar • Alta probabilidade de conversão
-                </p>
-              )}
             </div>
 
             {aiEnabled && (
               <>
                 {/* Detected Images Card */}
                 {detectedImages.length > 0 && (
-                  <Card className="mb-4 border-warning/30 bg-warning/5 animate-fade-in">
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Image className="h-4 w-4 text-warning" />
-                        <span className="text-sm font-medium text-foreground">
-                          Imagens Detectadas
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {detectedImages.length}
-                        </Badge>
+                  <Card className="mb-3 border-warning/30 bg-warning/5 animate-fade-in">
+                    <CardContent className="p-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Image className="h-3.5 w-3.5 text-warning" />
+                          <span className="text-xs font-medium text-foreground">
+                            Documentos ({detectedImages.length})
+                          </span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => setShowImageReader(true)}
+                        >
+                          <ScanText className="h-3.5 w-3.5" />
+                          Ler
+                        </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        Detectamos possíveis documentos enviados pelo cliente
-                      </p>
-                      <Button 
-                        size="sm" 
-                        className="w-full gap-2"
-                        onClick={() => setShowImageReader(true)}
-                      >
-                        <ScanText className="h-4 w-4" />
-                        Ler Documentos
-                      </Button>
                       {capturedDocumentData && (
-                        <div className="mt-3 p-2 rounded-lg bg-background border border-success/30 animate-scale-in">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                            <p className="text-xs text-success font-medium">Dados capturados:</p>
+                        <div className="p-2 rounded-lg bg-background border border-success/30 animate-scale-in">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                            <p className="text-[10px] text-success font-medium">Capturado</p>
                           </div>
-                          <div className="text-xs space-y-0.5 text-foreground">
+                          <div className="text-[11px] space-y-0.5 text-foreground">
                             {capturedDocumentData.name && <p><strong>Nome:</strong> {capturedDocumentData.name}</p>}
                             {capturedDocumentData.cpf && <p><strong>CPF:</strong> {capturedDocumentData.cpf}</p>}
-                            {capturedDocumentData.birthDate && <p><strong>Nascimento:</strong> {new Date(capturedDocumentData.birthDate).toLocaleDateString('pt-BR')}</p>}
                           </div>
                         </div>
                       )}
@@ -342,62 +334,62 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                 )}
 
                 {/* Suggestions */}
-                <div className="mb-6">
-                  <h4 className="mb-3 text-sm font-semibold text-foreground">Sugestões</h4>
-                  <div className="flex flex-col gap-2">
+                <div className="mb-3">
+                  <h4 className="mb-2 text-xs font-semibold text-foreground">Sugestões</h4>
+                  <div className="flex flex-col gap-1.5">
                     {suggestions.map((suggestion) => {
                       const Icon = suggestionIcons[suggestion.type];
                       return (
                         <Card
                           key={suggestion.id}
                           className={cn(
-                            'cursor-pointer border transition-all animate-slide-up',
+                            'cursor-pointer border transition-all',
                             suggestionColors[suggestion.type]
                           )}
                           onClick={() => onUseSuggestion(suggestion)}
                         >
-                          <CardContent className="p-3">
+                          <CardContent className="p-2">
                             <div className="flex items-start gap-2">
-                              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background">
-                                <Icon className="h-3.5 w-3.5 text-primary" />
+                              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-background">
+                                <Icon className="h-3 w-3 text-primary" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-sm font-medium text-foreground">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-xs font-medium text-foreground line-clamp-1">
                                     {suggestion.title}
                                   </span>
-                                  <Badge variant="secondary" className="text-xs shrink-0">
+                                  <Badge variant="secondary" className="text-[10px] shrink-0 px-1 py-0">
                                     {suggestion.confidence}%
                                   </Badge>
                                 </div>
-                                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                                <p className="text-[11px] text-muted-foreground line-clamp-1">
                                   {suggestion.content}
                                 </p>
                               </div>
                             </div>
                             {suggestion.type === 'response' && (
-                              <div className="mt-2 flex gap-2">
+                              <div className="mt-1.5 flex gap-1.5">
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  className="h-7 flex-1 text-xs"
+                                  className="h-6 flex-1 text-[10px]"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleCopy(suggestion.content);
                                   }}
                                 >
-                                  <Copy className="mr-1 h-3 w-3" />
+                                  <Copy className="mr-1 h-2.5 w-2.5" />
                                   Copiar
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="h-7 flex-1 text-xs bg-primary hover:bg-primary/90"
+                                  className="h-6 flex-1 text-[10px] bg-primary hover:bg-primary/90"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     onUseSuggestion(suggestion);
                                   }}
                                 >
-                                  <Send className="mr-1 h-3 w-3" />
+                                  <Send className="mr-1 h-2.5 w-2.5" />
                                   Usar
                                 </Button>
                               </div>
@@ -411,55 +403,55 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
 
                 {/* Quick Actions */}
                 <div>
-                  <h4 className="mb-3 text-sm font-semibold text-foreground">Ações Rápidas</h4>
-                  <div className="grid grid-cols-2 gap-2">
+                  <h4 className="mb-2 text-xs font-semibold text-foreground">Ações Rápidas</h4>
+                  <div className="grid grid-cols-2 gap-1.5">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-auto flex-col gap-1 py-3"
+                      className="h-auto flex-col gap-0.5 py-2"
                       onClick={() => setShowQuoteSearch(true)}
                     >
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Fazer Orçamento</span>
+                      <FileText className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[10px]">Orçamento</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-auto flex-col gap-1 py-3"
+                      className="h-auto flex-col gap-0.5 py-2"
                       onClick={() => setShowItineraryCreator(true)}
                     >
-                      <Map className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Criar Roteiro</span>
+                      <Map className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[10px]">Roteiro</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-auto flex-col gap-1 py-3"
+                      className="h-auto flex-col gap-0.5 py-2"
                       onClick={() => {
                         setQuoteGeneratorData(undefined);
                         setShowQuoteGenerator(true);
                       }}
                     >
-                      <CreditCard className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Gerar Orçamento</span>
+                      <CreditCard className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[10px]">Gerar</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-auto flex-col gap-1 py-3"
+                      className="h-auto flex-col gap-0.5 py-2"
                       onClick={() => setShowPDFExport(true)}
                     >
-                      <FileDown className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Exportar PDF</span>
+                      <FileDown className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[10px]">PDF</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-auto flex-col gap-1 py-3 col-span-2"
+                      className="h-auto flex-col gap-0.5 py-2 col-span-2"
                       onClick={() => setShowImageReader(true)}
                     >
-                      <ScanText className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Ler Documentos</span>
+                      <ScanText className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[10px]">Ler Documentos</span>
                     </Button>
                   </div>
                 </div>
