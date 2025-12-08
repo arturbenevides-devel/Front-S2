@@ -384,33 +384,6 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                   </div>
                 </div>
 
-                {/* Recommended Packages */}
-                <div>
-                  <h4 className="mb-3 text-sm font-semibold text-foreground">Pacotes Recomendados</h4>
-                  <div className="flex flex-col gap-2">
-                    {packages.map((pkg) => (
-                      <Card key={pkg.id} className="border-border/50 hover:border-primary/30 transition-colors cursor-pointer">
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-sm text-foreground">{pkg.destination}</p>
-                              <p className="text-xs text-muted-foreground">{pkg.duration}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-primary">
-                                {new Intl.NumberFormat('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL',
-                                }).format(pkg.price)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">por pessoa</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
               </>
             )}
 

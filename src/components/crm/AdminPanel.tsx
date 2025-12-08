@@ -79,6 +79,7 @@ export function AdminPanel() {
   const [agents, setAgents] = useState<Agent[]>(mockAgents);
   const [transfers] = useState<TransferRequest[]>(mockTransfers);
   const [sdrEnabled, setSdrEnabled] = useState(true);
+  const [catalogEnabled, setCatalogEnabled] = useState(true);
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [newAgent, setNewAgent] = useState<{ name: string; email: string; role: 'admin' | 'agent' | 'supervisor' }>({ name: '', email: '', role: 'agent' });
   const [agencySettings, setAgencySettings] = useState<AgencySettings>(defaultAgencySettings);
@@ -437,6 +438,24 @@ export function AdminPanel() {
                   </div>
                 </>
               )}
+
+              <Separator />
+
+              {/* Catalog Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${catalogEnabled ? 'bg-primary/10' : 'bg-muted'}`}>
+                    <FileText className={`h-5 w-5 ${catalogEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Enviar Catálogo</p>
+                    <p className="text-sm text-muted-foreground">
+                      Permite que atendentes enviem catálogo de pacotes
+                    </p>
+                  </div>
+                </div>
+                <Switch checked={catalogEnabled} onCheckedChange={setCatalogEnabled} />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
