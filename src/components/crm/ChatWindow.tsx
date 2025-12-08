@@ -12,6 +12,11 @@ import { CompleteServiceModal } from './CompleteServiceModal';
 interface ChatWindowProps {
   conversation: Conversation | null;
   onSendMessage: (content: string) => void;
+  capturedDocumentData?: {
+    name?: string;
+    cpf?: string;
+    birthDate?: string;
+  } | null;
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -51,7 +56,7 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
+export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }: ChatWindowProps) {
   const [message, setMessage] = useState('');
   const [showCompleteSale, setShowCompleteSale] = useState(false);
   const [showCompleteService, setShowCompleteService] = useState(false);
@@ -206,6 +211,7 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
         open={showCompleteSale}
         onClose={() => setShowCompleteSale(false)}
         contactName={conversation.contact.name}
+        capturedClientData={capturedDocumentData || undefined}
       />
 
       <CompleteServiceModal
