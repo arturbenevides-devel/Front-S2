@@ -18,6 +18,8 @@ export interface Message {
   type: 'text' | 'image' | 'document' | 'audio';
 }
 
+export type ConversationReadStatus = 'pending' | 'unread' | 'read';
+
 export interface Conversation {
   id: string;
   contact: Contact;
@@ -27,6 +29,8 @@ export interface Conversation {
   messages: Message[];
   category?: 'lead' | 'booking' | 'support' | 'followup';
   aiEnabled?: boolean;
+  readStatus: ConversationReadStatus;
+  assignedTo?: string; // Agent ID who claimed the conversation
 }
 
 export interface AISuggestion {

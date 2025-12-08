@@ -92,6 +92,18 @@ export function CRMLayout() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleClaimConversation = useCallback((conversationId: string) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conversationId ? { ...c, readStatus: 'unread' as const, assignedTo: 'current-user' } : c
+      )
+    );
+    toast({
+      title: 'Atendimento assumido',
+      description: 'Você assumiu este atendimento.',
+    });
+  }, [toast]);
+
   const handleSelectConversation = useCallback((conversation: Conversation) => {
     // If there's a selected conversation and user is switching, show task modal
     if (selectedConversation && selectedConversation.id !== conversation.id) {
@@ -100,12 +112,13 @@ export function CRMLayout() {
       return;
     }
 
+    // Mark as read when selecting
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === conversation.id ? { ...c, unreadCount: 0 } : c
+        c.id === conversation.id ? { ...c, unreadCount: 0, readStatus: 'read' as const } : c
       )
     );
-    setSelectedConversation({ ...conversation, unreadCount: 0 });
+    setSelectedConversation({ ...conversation, unreadCount: 0, readStatus: 'read' });
     setViewMode('chat');
     setMobilePanel('chat');
   }, [selectedConversation]);
@@ -346,6 +359,7 @@ export function CRMLayout() {
               conversations={conversations}
               selectedId={selectedConversation?.id || null}
               onSelect={handleSelectConversation}
+              onClaimConversation={handleClaimConversation}
             />
           </div>
         </div>
@@ -498,6 +512,7 @@ export function CRMLayout() {
                   conversations={conversations}
                   selectedId={selectedConversation?.id || null}
                   onSelect={handleSelectConversation}
+                  onClaimConversation={handleClaimConversation}
                 />
               )}
               {mobilePanel === 'chat' && (
