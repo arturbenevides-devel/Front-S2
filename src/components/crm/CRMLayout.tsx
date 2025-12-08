@@ -76,6 +76,11 @@ export function CRMLayout() {
   const [pendingConversationChange, setPendingConversationChange] = useState<Conversation | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('list');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [capturedDocumentData, setCapturedDocumentData] = useState<{
+    name?: string;
+    cpf?: string;
+    birthDate?: string;
+  } | null>(null);
   const { toast } = useToast();
 
   // Check for due tasks periodically
@@ -353,6 +358,7 @@ export function CRMLayout() {
               <ChatWindow
                 conversation={selectedConversation}
                 onSendMessage={handleSendMessage}
+                capturedDocumentData={capturedDocumentData}
               />
             </div>
 
@@ -366,6 +372,7 @@ export function CRMLayout() {
                 aiEnabled={selectedConversation?.aiEnabled ?? true}
                 onToggleAI={handleToggleAI}
                 onUpdateTags={handleUpdateTags}
+                onDocumentDataCaptured={setCapturedDocumentData}
               />
             </div>
           </>
@@ -497,6 +504,7 @@ export function CRMLayout() {
                 <ChatWindow
                   conversation={selectedConversation}
                   onSendMessage={handleSendMessage}
+                  capturedDocumentData={capturedDocumentData}
                 />
               )}
               {mobilePanel === 'ai' && (
@@ -508,6 +516,7 @@ export function CRMLayout() {
                   aiEnabled={selectedConversation?.aiEnabled ?? true}
                   onToggleAI={handleToggleAI}
                   onUpdateTags={handleUpdateTags}
+                  onDocumentDataCaptured={setCapturedDocumentData}
                 />
               )}
             </>

@@ -26,6 +26,7 @@ interface AIPanelProps {
   aiEnabled: boolean;
   onToggleAI: (enabled: boolean) => void;
   onUpdateTags?: (conversationId: string, tags: string[]) => void;
+  onDocumentDataCaptured?: (data: { name?: string; cpf?: string; birthDate?: string }) => void;
 }
 
 const suggestionIcons = {
@@ -48,7 +49,7 @@ const mockAIResponses: Record<string, string> = {
   preco: "Para o destino mencionado, temos opções a partir de R$ 3.500 por pessoa (7 noites). Posso gerar um orçamento personalizado se desejar.",
 };
 
-export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, aiEnabled, onToggleAI, onUpdateTags }: AIPanelProps) {
+export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, aiEnabled, onToggleAI, onUpdateTags, onDocumentDataCaptured }: AIPanelProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'suggestions' | 'chat'>('suggestions');
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([]);
@@ -593,14 +594,16 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
         open={showImageReader}
         onClose={() => setShowImageReader(false)}
         onDataExtracted={(data) => {
-          setCapturedDocumentData({
+          const capturedData = {
             name: data.name,
             cpf: data.cpf,
             birthDate: data.birthDate,
-          });
+          };
+          setCapturedDocumentData(capturedData);
+          onDocumentDataCaptured?.(capturedData);
           toast({
             title: "Dados Capturados",
-            description: "Os dados do documento foram salvos para uso posterior.",
+            description: "Os dados do documento foram salvos e serão usados no Concluir Venda.",
           });
         }}
       />
