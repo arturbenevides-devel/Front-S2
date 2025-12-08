@@ -301,7 +301,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
               <>
                 {/* Detected Images Card */}
                 {detectedImages.length > 0 && (
-                  <Card className="mb-4 border-warning/30 bg-warning/5">
+                  <Card className="mb-4 border-warning/30 bg-warning/5 animate-fade-in">
                     <CardContent className="p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <Image className="h-4 w-4 text-warning" />
@@ -324,9 +324,12 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                         Ler Documentos
                       </Button>
                       {capturedDocumentData && (
-                        <div className="mt-3 p-2 rounded-lg bg-background border border-border">
-                          <p className="text-xs text-muted-foreground mb-1">Dados capturados:</p>
-                          <div className="text-xs space-y-0.5">
+                        <div className="mt-3 p-2 rounded-lg bg-background border border-success/30 animate-scale-in">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                            <p className="text-xs text-success font-medium">Dados capturados:</p>
+                          </div>
+                          <div className="text-xs space-y-0.5 text-foreground">
                             {capturedDocumentData.name && <p><strong>Nome:</strong> {capturedDocumentData.name}</p>}
                             {capturedDocumentData.cpf && <p><strong>CPF:</strong> {capturedDocumentData.cpf}</p>}
                             {capturedDocumentData.birthDate && <p><strong>Nascimento:</strong> {new Date(capturedDocumentData.birthDate).toLocaleDateString('pt-BR')}</p>}
