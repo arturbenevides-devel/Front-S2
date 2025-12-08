@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ScanText, ShoppingCart } from 'lucide-react';
+import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ScanText, ShoppingCart, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Conversation, Message } from '@/types/crm';
 import { ImageReaderModal } from './ImageReaderModal';
 import { CompleteSaleModal } from './CompleteSaleModal';
+import { CompleteServiceModal } from './CompleteServiceModal';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -55,6 +56,7 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
   const [message, setMessage] = useState('');
   const [showImageReader, setShowImageReader] = useState(false);
   const [showCompleteSale, setShowCompleteSale] = useState(false);
+  const [showCompleteService, setShowCompleteService] = useState(false);
   const [capturedClientData, setCapturedClientData] = useState<{
     name?: string;
     cpf?: string;
@@ -165,6 +167,23 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
           >
             <ShoppingCart className="h-4 w-4" />
           </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="gap-1.5 text-xs hidden sm:flex border-primary text-primary hover:bg-primary/10"
+            onClick={() => setShowCompleteService(true)}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="hidden md:inline">Concluir Atendimento</span>
+          </Button>
+          <Button 
+            size="icon" 
+            variant="outline"
+            className="sm:hidden h-8 w-8 border-primary text-primary hover:bg-primary/10"
+            onClick={() => setShowCompleteService(true)}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+          </Button>
           <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary hidden sm:flex h-8 w-8">
             <Phone className="h-5 w-5" />
           </Button>
@@ -226,6 +245,12 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
         onClose={() => setShowCompleteSale(false)}
         contactName={conversation.contact.name}
         capturedClientData={capturedClientData}
+      />
+
+      <CompleteServiceModal
+        open={showCompleteService}
+        onClose={() => setShowCompleteService(false)}
+        conversation={conversation}
       />
     </div>
   );
