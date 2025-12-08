@@ -406,7 +406,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                 </div>
 
                 {/* Quick Actions */}
-                <div className="mb-6">
+                <div>
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Ações Rápidas</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <Button 
