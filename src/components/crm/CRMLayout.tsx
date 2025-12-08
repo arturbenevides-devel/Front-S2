@@ -262,7 +262,7 @@ export function CRMLayout() {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Desktop Layout */}
-      <div className="hidden lg:flex w-full">
+      <div className="hidden md:flex w-full">
         {/* Conversations Sidebar - 320px */}
         <div className="w-80 shrink-0 flex flex-col">
           {/* Navigation Tabs */}
@@ -368,7 +368,7 @@ export function CRMLayout() {
       </div>
 
       {/* Mobile Layout */}
-      <div className="flex lg:hidden flex-col w-full h-full">
+      <div className="flex md:hidden flex-col w-full h-full">
         {/* Mobile Header */}
         <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
           <div className="flex items-center gap-2">
