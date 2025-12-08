@@ -26,6 +26,7 @@ export interface Conversation {
   unreadCount: number;
   messages: Message[];
   category?: 'lead' | 'booking' | 'support' | 'followup';
+  aiEnabled?: boolean;
 }
 
 export interface AISuggestion {
@@ -43,4 +44,25 @@ export interface TravelPackage {
   price: number;
   duration: string;
   image?: string;
+}
+
+export type TaskStatus = 'em_orcamento' | 'follow_up' | 'em_qualificacao' | 'vendido';
+
+export interface CustomerTask {
+  id: string;
+  conversationId: string;
+  contactName: string;
+  status: TaskStatus;
+  nextStep: string;
+  scheduledDate: Date;
+  createdAt: Date;
+  completed: boolean;
+  snoozedUntil?: Date;
+}
+
+export interface AIChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
