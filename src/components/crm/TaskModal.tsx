@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar, Clock, CheckCircle2, Timer } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, Timer, DollarSign } from 'lucide-react';
 import { TaskStatus, CustomerTask, Conversation } from '@/types/crm';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +37,7 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
   const [scheduledTime, setScheduledTime] = useState('');
   const [useQuickTime, setUseQuickTime] = useState(true);
   const [selectedQuickTime, setSelectedQuickTime] = useState<number | null>(null);
+  const [value, setValue] = useState('');
 
   const handleQuickTimeSelect = (minutes: number) => {
     setSelectedQuickTime(minutes);
@@ -69,6 +70,7 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
       status,
       nextStep,
       scheduledDate: dateTime,
+      value: value ? parseFloat(value) : undefined,
     });
 
     // Reset form
@@ -78,10 +80,12 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
     setScheduledTime('');
     setSelectedQuickTime(null);
     setUseQuickTime(true);
+    setValue('');
     onClose();
   };
 
-  const isFormValid = nextStep && (selectedQuickTime || (scheduledDate && scheduledTime));
+  const isValueRequired = status === 'vendido';
+  const isFormValid = nextStep && (selectedQuickTime || (scheduledDate && scheduledTime)) && (!isValueRequired || (value && parseFloat(value) > 0));
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -122,6 +126,27 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
                 </div>
               ))}
             </RadioGroup>
+          </div>
+
+          {/* Value Field */}
+          <div className="space-y-2">
+            <Label htmlFor="value" className="text-sm font-medium flex items-center gap-1">
+              <DollarSign className="h-3.5 w-3.5" />
+              Valor {isValueRequired && <span className="text-destructive">*</span>}
+            </Label>
+            <Input
+              id="value"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={isValueRequired ? "Obrigatório para vendas" : "Valor da proposta (opcional)"}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className={cn(isValueRequired && !value && "border-destructive")}
+            />
+            {isValueRequired && !value && (
+              <p className="text-xs text-destructive">Informe o valor da venda</p>
+            )}
           </div>
 
           {/* Next Step */}

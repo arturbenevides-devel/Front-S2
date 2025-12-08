@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Copy, Send, ChevronRight, Plane, Map, CreditCard, User, RefreshCw, MessageCircle, Power, Bot } from 'lucide-react';
+import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { AISuggestion, Conversation, TravelPackage, AIChatMessage } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
+import { QuoteSearchModal } from './QuoteSearchModal';
+import { QuoteGeneratorModal } from './QuoteGeneratorModal';
+import { ItineraryCreatorModal } from './ItineraryCreatorModal';
 
 interface AIPanelProps {
   conversation: Conversation | null;
@@ -49,6 +52,22 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Modal states
+  const [showQuoteSearch, setShowQuoteSearch] = useState(false);
+  const [showQuoteGenerator, setShowQuoteGenerator] = useState(false);
+  const [showItineraryCreator, setShowItineraryCreator] = useState(false);
+  const [quoteGeneratorData, setQuoteGeneratorData] = useState<{ type: string; title: string; details: string; price?: number } | undefined>();
+
+  // Mock AI analysis for pre-filling search
+  const aiAnalysis = conversation ? {
+    destination: conversation.lastMessage.includes('Cancún') ? 'Cancún' : 
+                 conversation.lastMessage.includes('Paris') ? 'Paris' : 'Rio de Janeiro',
+    checkIn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    checkOut: new Date(Date.now() + 37 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    adults: 2,
+    children: 0,
+  } : undefined;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -111,6 +130,16 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
       setChatMessages(prev => [...prev, aiMessage]);
       setIsTyping(false);
     }, 1500);
+  };
+
+  const handleGenerateQuoteFromSearch = (data: { type: string; title: string; details: string; price?: number }) => {
+    setQuoteGeneratorData(data);
+    setShowQuoteGenerator(true);
+  };
+
+  const handleGenerateQuoteFromItinerary = (data: { type: string; title: string; details: string }) => {
+    setQuoteGeneratorData({ ...data, price: 0 });
+    setShowQuoteGenerator(true);
   };
 
   if (!conversation) {
@@ -283,15 +312,33 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                 <div className="mb-6">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Ações Rápidas</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-3">
-                      <Plane className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Buscar Voos</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-auto flex-col gap-1 py-3"
+                      onClick={() => setShowQuoteSearch(true)}
+                    >
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="text-xs">Fazer Orçamento</span>
                     </Button>
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-auto flex-col gap-1 py-3"
+                      onClick={() => setShowItineraryCreator(true)}
+                    >
                       <Map className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Ver Pacotes</span>
+                      <span className="text-xs">Criar Roteiro</span>
                     </Button>
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-auto flex-col gap-1 py-3"
+                      onClick={() => {
+                        setQuoteGeneratorData(undefined);
+                        setShowQuoteGenerator(true);
+                      }}
+                    >
                       <CreditCard className="h-4 w-4 text-primary" />
                       <span className="text-xs">Gerar Orçamento</span>
                     </Button>
@@ -426,6 +473,29 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <QuoteSearchModal
+        open={showQuoteSearch}
+        onClose={() => setShowQuoteSearch(false)}
+        aiAnalysis={aiAnalysis}
+        onGenerateQuote={handleGenerateQuoteFromSearch}
+      />
+
+      <QuoteGeneratorModal
+        open={showQuoteGenerator}
+        onClose={() => {
+          setShowQuoteGenerator(false);
+          setQuoteGeneratorData(undefined);
+        }}
+        prefillData={quoteGeneratorData}
+      />
+
+      <ItineraryCreatorModal
+        open={showItineraryCreator}
+        onClose={() => setShowItineraryCreator(false)}
+        onGenerateQuote={handleGenerateQuoteFromItinerary}
+      />
     </div>
   );
 }

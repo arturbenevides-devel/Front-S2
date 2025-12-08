@@ -58,6 +58,7 @@ export interface CustomerTask {
   createdAt: Date;
   completed: boolean;
   snoozedUntil?: Date;
+  value?: number;
 }
 
 export interface AIChatMessage {
