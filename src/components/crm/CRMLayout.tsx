@@ -8,6 +8,7 @@ import { TaskReminder } from './TaskReminder';
 import { TaskManagement } from './TaskManagement';
 import { AdminPanel } from './AdminPanel';
 import { SupervisionPanel } from './SupervisionPanel';
+import { UnresponsedAlert } from './UnresponsedAlert';
 import { Conversation, Message, CustomerTask, DismissedActivityReport } from '@/types/crm';
 import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
@@ -291,9 +292,37 @@ export function CRMLayout() {
   const handleNavigateToTask = (conversationId: string) => {
     const conversation = conversations.find((c) => c.id === conversationId);
     if (conversation) {
-      setSelectedConversation({ ...conversation, unreadCount: 0 });
+      setSelectedConversation({ ...conversation, unreadCount: 0, readStatus: 'read' });
       setViewMode('chat');
+      setMobilePanel('chat');
     }
+  };
+
+  // Handlers for unresponsed alert actions
+  const handleEnableAIForConversation = (conversationId: string) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, aiEnabled: true } : c))
+    );
+    toast({
+      title: 'IA Automática Ativada',
+      description: 'A IA responderá automaticamente este cliente.',
+    });
+  };
+
+  const handleTransferConversation = (conversationId: string) => {
+    // In real app, would open transfer dialog
+    toast({
+      title: 'Transferência Solicitada',
+      description: 'A conversa será transferida para outro atendente.',
+    });
+  };
+
+  const handleRequestSupervisorHelp = (conversationId: string) => {
+    toast({
+      title: 'Ajuda Solicitada',
+      description: 'A supervisão foi notificada e irá auxiliar.',
+      className: 'bg-warning/10 border-warning',
+    });
   };
 
   const handleDismissActivity = (report: Omit<DismissedActivityReport, 'id' | 'dismissedAt'>) => {
@@ -664,6 +693,16 @@ export function CRMLayout() {
         onSnooze={handleSnoozeTask}
         onDismiss={handleDismissTask}
         onNavigate={handleNavigateToTask}
+      />
+
+      {/* Unresponsed Conversations Alert */}
+      <UnresponsedAlert
+        conversations={conversations}
+        onEnableAI={handleEnableAIForConversation}
+        onTransfer={handleTransferConversation}
+        onRequestHelp={handleRequestSupervisorHelp}
+        onNavigate={handleNavigateToTask}
+        isSupervisor={viewMode === 'supervision'}
       />
     </div>
   );
