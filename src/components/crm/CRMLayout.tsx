@@ -91,6 +91,7 @@ export function CRMLayout() {
   const { playNotificationSound } = useNotificationSound();
   const previousPendingCountRef = useRef<number>(0);
   const [newLeadAlert, setNewLeadAlert] = useState(false);
+  const [gamificationEnabled, setGamificationEnabled] = useState(true);
 
   // Count pending conversations
   const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
@@ -423,20 +424,24 @@ export function CRMLayout() {
               <Eye className="w-4 h-4" />
               Supervisão
             </Button>
-            <Button
-              variant={viewMode === 'gamification' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('gamification')}
-              className="flex-1 gap-2"
-            >
-              <Gamepad2 className="w-4 h-4" />
-              Gamificação
-            </Button>
+            {gamificationEnabled && (
+              <Button
+                variant={viewMode === 'gamification' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('gamification')}
+                className="flex-1 gap-2"
+              >
+                <Gamepad2 className="w-4 h-4" />
+                Gamificação
+              </Button>
+            )}
           </div>
           {/* Agent Profile Mini */}
-          <div className="px-3 pb-3">
-            <AgentProfile agent={currentAgent} compact />
-          </div>
+          {gamificationEnabled && (
+            <div className="px-3 pb-3">
+              <AgentProfile agent={currentAgent} compact />
+            </div>
+          )}
           <div className="flex-1 overflow-hidden">
             <ConversationList
               conversations={conversations}
@@ -480,7 +485,10 @@ export function CRMLayout() {
             onNavigate={handleNavigateToTask}
           />
         ) : viewMode === 'admin' ? (
-          <AdminPanel />
+          <AdminPanel 
+            gamificationEnabled={gamificationEnabled}
+            onGamificationToggle={setGamificationEnabled}
+          />
         ) : viewMode === 'supervision' ? (
           <SupervisionPanel
             conversations={conversations}
@@ -488,7 +496,7 @@ export function CRMLayout() {
             dismissedReports={dismissedReports}
             onViewConversation={handleNavigateToTask}
           />
-        ) : viewMode === 'gamification' ? (
+        ) : viewMode === 'gamification' && gamificationEnabled ? (
           <GamificationDashboard />
         ) : (
           <MetricsDashboard />
