@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { AIPanel } from './AIPanel';
@@ -11,9 +11,11 @@ import { SupervisionPanel } from './SupervisionPanel';
 import { Conversation, Message, CustomerTask, DismissedActivityReport } from '@/types/crm';
 import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, X } from 'lucide-react';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision';
 type MobilePanel = 'list' | 'chat' | 'ai';
@@ -82,6 +84,31 @@ export function CRMLayout() {
     birthDate?: string;
   } | null>(null);
   const { toast } = useToast();
+  const { playNotificationSound } = useNotificationSound();
+  const previousPendingCountRef = useRef<number>(0);
+  const [newLeadAlert, setNewLeadAlert] = useState(false);
+
+  // Count pending conversations
+  const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
+
+  // Check for new pending leads and trigger notification
+  useEffect(() => {
+    if (pendingCount > previousPendingCountRef.current) {
+      // New pending lead arrived
+      playNotificationSound();
+      setNewLeadAlert(true);
+      
+      toast({
+        title: '🔔 Nova lead pendente!',
+        description: `Você tem ${pendingCount} lead${pendingCount > 1 ? 's' : ''} aguardando atendimento.`,
+        className: 'bg-warning/10 border-warning',
+      });
+
+      // Reset alert animation after 3 seconds
+      setTimeout(() => setNewLeadAlert(false), 3000);
+    }
+    previousPendingCountRef.current = pendingCount;
+  }, [pendingCount, playNotificationSound, toast]);
 
   // Check for due tasks periodically
   useEffect(() => {
@@ -311,10 +338,21 @@ export function CRMLayout() {
                 variant={viewMode === 'chat' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('chat')}
-                className="flex-1 gap-2"
+                className={cn(
+                  "flex-1 gap-2 relative",
+                  newLeadAlert && "animate-pulse"
+                )}
               >
                 <MessageSquare className="w-4 h-4" />
                 Conversas
+                {pendingCount > 0 && (
+                  <span className={cn(
+                    "absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-warning text-warning-foreground text-xs font-bold flex items-center justify-center",
+                    newLeadAlert && "animate-bounce"
+                  )}>
+                    {pendingCount}
+                  </span>
+                )}
               </Button>
               <Button
                 variant={viewMode === 'tasks' ? 'default' : 'ghost'}
@@ -561,11 +599,23 @@ export function CRMLayout() {
             <Button
               variant="ghost"
               size="sm"
-              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'chat' ? 'text-primary' : 'text-muted-foreground'}`}
+              className={cn(
+                "flex-col gap-1 h-auto py-2 px-3 relative",
+                viewMode === 'chat' ? 'text-primary' : 'text-muted-foreground',
+                newLeadAlert && "animate-pulse"
+              )}
               onClick={() => { setViewMode('chat'); setMobilePanel('list'); }}
             >
               <MessageSquare className="w-5 h-5" />
               <span className="text-xs">Conversas</span>
+              {pendingCount > 0 && (
+                <span className={cn(
+                  "absolute top-0 right-1 h-4 min-w-4 px-0.5 rounded-full bg-warning text-warning-foreground text-[10px] font-bold flex items-center justify-center",
+                  newLeadAlert && "animate-bounce"
+                )}>
+                  {pendingCount}
+                </span>
+              )}
             </Button>
             <Button
               variant="ghost"
