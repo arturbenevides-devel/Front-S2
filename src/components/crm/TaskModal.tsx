@@ -130,25 +130,25 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
   return (
     <>
       <Dialog open={open} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
+        <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
               Registrar Atividade
             </DialogTitle>
-            <DialogDescription>
-              Antes de sair, registre o status e próximo passo para {conversation?.contact.name}
+            <DialogDescription className="text-xs">
+              Registre o status e próximo passo para {conversation?.contact.name}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-2">
             {/* Status Selection */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Status do Cliente</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Status do Cliente</Label>
               <RadioGroup
                 value={status}
                 onValueChange={(value) => setStatus(value as TaskStatus)}
-                className="grid grid-cols-2 gap-2"
+                className="grid grid-cols-2 gap-1.5"
               >
                 {statusOptions.map((option) => (
                   <div key={option.value} className="flex items-center">
@@ -159,10 +159,10 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                     />
                     <Label
                       htmlFor={option.value}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border p-3 hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 transition-colors"
+                      className="flex w-full cursor-pointer items-center gap-1.5 rounded-md border border-border p-2 hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 transition-colors"
                     >
                       <div className={`h-2 w-2 rounded-full ${option.color}`} />
-                      <span className="text-sm">{option.label}</span>
+                      <span className="text-xs">{option.label}</span>
                     </Label>
                   </div>
                 ))}
@@ -170,9 +170,9 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
             </div>
 
             {/* Value Field */}
-            <div className="space-y-2">
-              <Label htmlFor="value" className="text-sm font-medium flex items-center gap-1">
-                <DollarSign className="h-3.5 w-3.5" />
+            <div className="space-y-1.5">
+              <Label htmlFor="value" className="text-xs font-medium flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />
                 Valor {isValueRequired && <span className="text-destructive">*</span>}
               </Label>
               <Input
@@ -180,19 +180,19 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder={isValueRequired ? "Obrigatório para vendas" : "Valor da proposta (opcional)"}
+                placeholder={isValueRequired ? "Obrigatório" : "Opcional"}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                className={cn(isValueRequired && !value && "border-destructive")}
+                className={cn("h-8 text-sm", isValueRequired && !value && "border-destructive")}
               />
               {isValueRequired && !value && (
-                <p className="text-xs text-destructive">Informe o valor da venda</p>
+                <p className="text-[10px] text-destructive">Informe o valor da venda</p>
               )}
             </div>
 
             {/* Next Step */}
-            <div className="space-y-2">
-              <Label htmlFor="nextStep" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <Label htmlFor="nextStep" className="text-xs font-medium">
                 Próximo Passo
               </Label>
               <Textarea
@@ -200,17 +200,17 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                 placeholder="Descreva a próxima ação..."
                 value={nextStep}
                 onChange={(e) => setNextStep(e.target.value)}
-                className="min-h-[80px] resize-none"
+                className="min-h-[60px] resize-none text-sm"
               />
             </div>
 
             {/* Quick Time Options */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-1">
-                <Timer className="h-3.5 w-3.5" />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium flex items-center gap-1">
+                <Timer className="h-3 w-3" />
                 Retornar Atendimento
               </Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-1.5">
                 {quickTimeOptions.map((option) => (
                   <Button
                     key={option.minutes}
@@ -219,8 +219,8 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                     size="sm"
                     onClick={() => handleQuickTimeSelect(option.minutes)}
                     className={cn(
-                      "h-10",
-                      selectedQuickTime === option.minutes && "ring-2 ring-primary ring-offset-2"
+                      "h-7 text-xs px-2",
+                      selectedQuickTime === option.minutes && "ring-1 ring-primary ring-offset-1"
                     )}
                   >
                     {option.label}
@@ -230,16 +230,16 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
             </div>
 
             {/* Manual Date/Time Option */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">ou agende manualmente</span>
+                <span className="text-[10px] text-muted-foreground">ou agende manualmente</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="date" className="text-sm font-medium flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="date" className="text-xs font-medium flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
                     Data
                   </Label>
                   <Input
@@ -251,11 +251,12 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                       handleManualTimeChange();
                     }}
                     min={new Date().toISOString().split('T')[0]}
+                    className="h-8 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time" className="text-sm font-medium flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
+                <div className="space-y-1">
+                  <Label htmlFor="time" className="text-xs font-medium flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
                     Horário
                   </Label>
                   <Input
@@ -266,6 +267,7 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                       setScheduledTime(e.target.value);
                       handleManualTimeChange();
                     }}
+                    className="h-8 text-sm"
                   />
                 </div>
               </div>
@@ -277,37 +279,37 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-muted-foreground hover:text-foreground"
+                  className="w-full text-muted-foreground hover:text-foreground h-7 text-xs"
                   onClick={() => setShowDismissOptions(true)}
                 >
-                  <XCircle className="w-4 h-4 mr-2" />
+                  <XCircle className="w-3 h-3 mr-1.5" />
                   Dispensar registro
                 </Button>
               ) : (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Opções de Dispensa</Label>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Opções de Dispensa</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                      className="border-destructive/50 text-destructive hover:bg-destructive/10 h-7 text-[10px] px-1.5"
                       onClick={() => handleDismissClick('permanent')}
                     >
-                      Dispensar para sempre
+                      Para sempre
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                      className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-7 text-[10px] px-1.5"
                       onClick={() => handleDismissClick('later')}
                     >
-                      Informarei mais tarde
+                      Mais tarde
                     </Button>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full text-xs"
+                    className="w-full text-[10px] h-6"
                     onClick={() => setShowDismissOptions(false)}
                   >
                     Voltar
@@ -317,26 +319,27 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
             </div>
 
             {/* Complete Service Shortcut */}
-            <div className="pt-2">
+            <div className="pt-1">
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full border-primary text-primary hover:bg-primary/10"
+                className="w-full border-primary text-primary hover:bg-primary/10 h-7 text-xs"
                 onClick={() => setShowCompleteService(true)}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Concluir Atendimento (Capturar dados para campanhas)
+                <Sparkles className="w-3 h-3 mr-1.5" />
+                Concluir Atendimento
               </Button>
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <Button 
               onClick={handleSubmit} 
               disabled={!isFormValid}
-              className="w-full sm:w-auto"
+              size="sm"
+              className="w-full sm:w-auto h-8 text-sm"
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
+              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
               Salvar e Continuar
             </Button>
           </div>
