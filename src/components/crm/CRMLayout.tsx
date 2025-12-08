@@ -5,13 +5,14 @@ import { AIPanel } from './AIPanel';
 import { MetricsDashboard } from './MetricsDashboard';
 import { TaskModal } from './TaskModal';
 import { TaskReminder } from './TaskReminder';
+import { TaskManagement } from './TaskManagement';
 import { Conversation, Message, CustomerTask } from '@/types/crm';
 import { mockConversations, mockAISuggestions, mockPackages } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart3, MessageSquare } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ViewMode = 'chat' | 'dashboard';
+type ViewMode = 'chat' | 'dashboard' | 'tasks';
 
 // Mock initial tasks for demonstration
 const initialTasks: CustomerTask[] = [
@@ -204,21 +205,32 @@ export function CRMLayout() {
       {/* Conversations Sidebar - 320px */}
       <div className="w-80 shrink-0 flex flex-col">
         {/* Navigation Tabs */}
-        <div className="p-3 border-b border-border bg-card flex gap-2">
-          <Button
-            variant={viewMode === 'chat' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('chat')}
-            className="flex-1 gap-2"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Conversas
-          </Button>
+        <div className="p-3 border-b border-border bg-card flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'chat' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('chat')}
+              className="flex-1 gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Conversas
+            </Button>
+            <Button
+              variant={viewMode === 'tasks' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('tasks')}
+              className="flex-1 gap-2"
+            >
+              <ListTodo className="w-4 h-4" />
+              Tarefas
+            </Button>
+          </div>
           <Button
             variant={viewMode === 'dashboard' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('dashboard')}
-            className="flex-1 gap-2"
+            className="gap-2"
           >
             <BarChart3 className="w-4 h-4" />
             Métricas
@@ -256,6 +268,12 @@ export function CRMLayout() {
             />
           </div>
         </>
+      ) : viewMode === 'tasks' ? (
+        <TaskManagement
+          tasks={tasks}
+          onComplete={handleCompleteTask}
+          onNavigate={handleNavigateToTask}
+        />
       ) : (
         <MetricsDashboard />
       )}
