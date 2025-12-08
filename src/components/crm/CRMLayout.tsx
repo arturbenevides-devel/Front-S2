@@ -6,13 +6,14 @@ import { MetricsDashboard } from './MetricsDashboard';
 import { TaskModal } from './TaskModal';
 import { TaskReminder } from './TaskReminder';
 import { TaskManagement } from './TaskManagement';
+import { AdminPanel } from './AdminPanel';
 import { Conversation, Message, CustomerTask } from '@/types/crm';
-import { mockConversations, mockAISuggestions, mockPackages } from '@/data/mockData';
+import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart3, MessageSquare, ListTodo } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ViewMode = 'chat' | 'dashboard' | 'tasks';
+type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin';
 
 // Mock initial tasks for demonstration
 const initialTasks: CustomerTask[] = [
@@ -40,7 +41,7 @@ const initialTasks: CustomerTask[] = [
 
 export function CRMLayout() {
   const [conversations, setConversations] = useState<Conversation[]>(
-    mockConversations.map(c => ({ ...c, aiEnabled: true }))
+    [...mockConversations, sdrConversation].map(c => ({ ...c, aiEnabled: true }))
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
@@ -230,10 +231,19 @@ export function CRMLayout() {
             variant={viewMode === 'dashboard' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('dashboard')}
-            className="gap-2"
+            className="flex-1 gap-2"
           >
             <BarChart3 className="w-4 h-4" />
             Métricas
+          </Button>
+          <Button
+            variant={viewMode === 'admin' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('admin')}
+            className="flex-1 gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Admin
           </Button>
         </div>
         <div className="flex-1 overflow-hidden">
@@ -274,6 +284,8 @@ export function CRMLayout() {
           onComplete={handleCompleteTask}
           onNavigate={handleNavigateToTask}
         />
+      ) : viewMode === 'admin' ? (
+        <AdminPanel />
       ) : (
         <MetricsDashboard />
       )}

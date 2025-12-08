@@ -208,3 +208,36 @@ export const mockPackages: TravelPackage[] = [
     duration: '6 noites',
   },
 ];
+
+// SDR Conversation - AI qualified lead
+export const sdrConversation: Conversation = {
+  id: 'sdr-1',
+  contact: {
+    id: 'c-sdr',
+    name: 'Roberto Lima',
+    phone: '+55 11 91234-5678',
+    status: 'online',
+    tags: ['SDR IA', 'Lead Qualificado'],
+  },
+  lastMessage: 'Perfeito! Aguardo o orçamento então.',
+  lastMessageTime: '11:45',
+  unreadCount: 0,
+  category: 'lead',
+  messages: [
+    { id: 'sdr-1', conversationId: 'sdr-1', content: 'Olá! Vi a promoção de vocês para o Caribe', timestamp: '11:20', sender: 'contact', type: 'text' },
+    { id: 'sdr-2', conversationId: 'sdr-1', content: '🤖 Olá Roberto! Que bom receber seu contato! Sou a assistente virtual da agência. Para oferecer as melhores opções, posso fazer algumas perguntas rápidas?', timestamp: '11:20', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-3', conversationId: 'sdr-1', content: 'Claro, pode perguntar!', timestamp: '11:21', sender: 'contact', type: 'text' },
+    { id: 'sdr-4', conversationId: 'sdr-1', content: '🤖 Ótimo! Qual destino no Caribe você tem interesse? Temos Cancún, Punta Cana, Aruba e outros.', timestamp: '11:21', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-5', conversationId: 'sdr-1', content: 'Estou pensando em Cancún ou Punta Cana, ainda não decidi', timestamp: '11:22', sender: 'contact', type: 'text' },
+    { id: 'sdr-6', conversationId: 'sdr-1', content: '🤖 Excelentes escolhas! Para quando você planeja viajar?', timestamp: '11:22', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-7', conversationId: 'sdr-1', content: 'Em março do ano que vem, por volta do dia 15', timestamp: '11:23', sender: 'contact', type: 'text' },
+    { id: 'sdr-8', conversationId: 'sdr-1', content: '🤖 Perfeito! Quantas pessoas viajarão com você?', timestamp: '11:23', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-9', conversationId: 'sdr-1', content: 'Seremos eu e minha esposa, 2 adultos', timestamp: '11:24', sender: 'contact', type: 'text' },
+    { id: 'sdr-10', conversationId: 'sdr-1', content: '🤖 Que romântico! Viagem a dois. Qual seria o orçamento aproximado que vocês têm em mente?', timestamp: '11:24', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-11', conversationId: 'sdr-1', content: 'Entre 15 e 20 mil reais para os dois', timestamp: '11:25', sender: 'contact', type: 'text' },
+    { id: 'sdr-12', conversationId: 'sdr-1', content: '🤖 Excelente! Preferem resort all-inclusive ou hotel com café da manhã?', timestamp: '11:25', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-13', conversationId: 'sdr-1', content: 'All inclusive seria o ideal', timestamp: '11:26', sender: 'contact', type: 'text' },
+    { id: 'sdr-14', conversationId: 'sdr-1', content: '🤖 📋 Resumo da Qualificação:\n\n✅ Destino: Cancún ou Punta Cana\n✅ Data: Março/2025 (~dia 15)\n✅ Viajantes: 2 adultos (casal)\n✅ Orçamento: R$ 15-20 mil\n✅ Preferência: All-inclusive\n\nRoberto, suas informações foram registradas! Um especialista em viagens ao Caribe vai preparar um orçamento personalizado para vocês. Por favor, aguarde alguns minutos enquanto elaboramos as melhores opções! 🏖️', timestamp: '11:30', sender: 'user', type: 'text', status: 'read' },
+    { id: 'sdr-15', conversationId: 'sdr-1', content: 'Perfeito! Aguardo o orçamento então.', timestamp: '11:45', sender: 'contact', type: 'text' },
+  ],
+};
