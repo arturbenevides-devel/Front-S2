@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ScanText, ShoppingCart, CheckCircle2 } from 'lucide-react';
+import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Conversation, Message } from '@/types/crm';
-import { ImageReaderModal } from './ImageReaderModal';
 import { CompleteSaleModal } from './CompleteSaleModal';
 import { CompleteServiceModal } from './CompleteServiceModal';
 
@@ -54,14 +53,8 @@ function MessageBubble({ message }: { message: Message }) {
 
 export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
   const [message, setMessage] = useState('');
-  const [showImageReader, setShowImageReader] = useState(false);
   const [showCompleteSale, setShowCompleteSale] = useState(false);
   const [showCompleteService, setShowCompleteService] = useState(false);
-  const [capturedClientData, setCapturedClientData] = useState<{
-    name?: string;
-    cpf?: string;
-    birthDate?: string;
-  }>({});
 
   const handleSend = () => {
     if (message.trim()) {
@@ -75,14 +68,6 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
       e.preventDefault();
       handleSend();
     }
-  };
-
-  const handleImageCapture = (data: { name?: string; cpf?: string; birthDate?: string }) => {
-    setCapturedClientData({
-      name: data.name,
-      cpf: data.cpf,
-      birthDate: data.birthDate,
-    });
   };
 
   if (!conversation) {
@@ -135,24 +120,7 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="gap-1.5 text-xs hidden sm:flex"
-            onClick={() => setShowImageReader(true)}
-          >
-            <ScanText className="h-4 w-4" />
-            <span className="hidden md:inline">Ler Imagens</span>
-          </Button>
-          <Button 
-            size="icon" 
-            variant="outline" 
-            className="sm:hidden h-8 w-8"
-            onClick={() => setShowImageReader(true)}
-          >
-            <ScanText className="h-4 w-4" />
-          </Button>
-          <Button 
+          <Button
             size="sm" 
             className="gap-1.5 text-xs bg-success hover:bg-success/90 hidden sm:flex"
             onClick={() => setShowCompleteSale(true)}
@@ -234,17 +202,10 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
       </div>
 
       {/* Modals */}
-      <ImageReaderModal
-        open={showImageReader}
-        onClose={() => setShowImageReader(false)}
-        onDataExtracted={handleImageCapture}
-      />
-
       <CompleteSaleModal
         open={showCompleteSale}
         onClose={() => setShowCompleteSale(false)}
         contactName={conversation.contact.name}
-        capturedClientData={capturedClientData}
       />
 
       <CompleteServiceModal

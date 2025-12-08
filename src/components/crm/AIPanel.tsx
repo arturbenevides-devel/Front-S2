@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map, Zap, FileDown } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map, Zap, FileDown, ScanText, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { QuoteGeneratorModal } from './QuoteGeneratorModal';
 import { ItineraryCreatorModal } from './ItineraryCreatorModal';
 import { PDFExportModal } from './PDFExportModal';
 import { TagManager } from './TagManager';
+import { ImageReaderModal } from './ImageReaderModal';
 
 interface AIPanelProps {
   conversation: Conversation | null;
@@ -61,8 +62,26 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   const [showQuoteGenerator, setShowQuoteGenerator] = useState(false);
   const [showItineraryCreator, setShowItineraryCreator] = useState(false);
   const [showPDFExport, setShowPDFExport] = useState(false);
+  const [showImageReader, setShowImageReader] = useState(false);
   const [quoteGeneratorData, setQuoteGeneratorData] = useState<{ type: string; title: string; details: string; price?: number } | undefined>();
   const [autopilotEnabled, setAutopilotEnabled] = useState(false);
+  const [capturedDocumentData, setCapturedDocumentData] = useState<{
+    name?: string;
+    cpf?: string;
+    birthDate?: string;
+  } | null>(null);
+
+  // Detect images in conversation messages
+  const detectedImages = useMemo(() => {
+    if (!conversation) return [];
+    
+    // Simulate detecting image messages (in real app, check for image URLs or attachments)
+    const imageKeywords = ['imagem', 'foto', 'documento', 'rg', 'cpf', 'passaporte', 'cnh', 'anexo', 'enviando'];
+    return conversation.messages.filter(msg => 
+      msg.sender === 'contact' && 
+      imageKeywords.some(keyword => msg.content.toLowerCase().includes(keyword))
+    );
+  }, [conversation]);
 
   // Mock AI analysis for pre-filling search
   const aiAnalysis = conversation ? {
@@ -280,6 +299,44 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
 
             {aiEnabled && (
               <>
+                {/* Detected Images Card */}
+                {detectedImages.length > 0 && (
+                  <Card className="mb-4 border-warning/30 bg-warning/5">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Image className="h-4 w-4 text-warning" />
+                        <span className="text-sm font-medium text-foreground">
+                          Imagens Detectadas
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {detectedImages.length}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Detectamos possíveis documentos enviados pelo cliente
+                      </p>
+                      <Button 
+                        size="sm" 
+                        className="w-full gap-2"
+                        onClick={() => setShowImageReader(true)}
+                      >
+                        <ScanText className="h-4 w-4" />
+                        Ler Documentos
+                      </Button>
+                      {capturedDocumentData && (
+                        <div className="mt-3 p-2 rounded-lg bg-background border border-border">
+                          <p className="text-xs text-muted-foreground mb-1">Dados capturados:</p>
+                          <div className="text-xs space-y-0.5">
+                            {capturedDocumentData.name && <p><strong>Nome:</strong> {capturedDocumentData.name}</p>}
+                            {capturedDocumentData.cpf && <p><strong>CPF:</strong> {capturedDocumentData.cpf}</p>}
+                            {capturedDocumentData.birthDate && <p><strong>Nascimento:</strong> {new Date(capturedDocumentData.birthDate).toLocaleDateString('pt-BR')}</p>}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Suggestions */}
                 <div className="mb-6">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Sugestões</h4>
@@ -390,6 +447,15 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                     >
                       <FileDown className="h-4 w-4 text-primary" />
                       <span className="text-xs">Exportar PDF</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-auto flex-col gap-1 py-3 col-span-2"
+                      onClick={() => setShowImageReader(true)}
+                    >
+                      <ScanText className="h-4 w-4 text-primary" />
+                      <span className="text-xs">Ler Documentos</span>
                     </Button>
                   </div>
                 </div>
@@ -518,6 +584,22 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
       <PDFExportModal
         open={showPDFExport}
         onClose={() => setShowPDFExport(false)}
+      />
+
+      <ImageReaderModal
+        open={showImageReader}
+        onClose={() => setShowImageReader(false)}
+        onDataExtracted={(data) => {
+          setCapturedDocumentData({
+            name: data.name,
+            cpf: data.cpf,
+            birthDate: data.birthDate,
+          });
+          toast({
+            title: "Dados Capturados",
+            description: "Os dados do documento foram salvos para uso posterior.",
+          });
+        }}
       />
     </div>
   );
