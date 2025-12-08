@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar, Clock, CheckCircle2, Timer, DollarSign, XCircle, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, Timer, DollarSign, XCircle, AlertTriangle, Sparkles } from 'lucide-react';
 import { TaskStatus, CustomerTask, Conversation, DismissType, DismissedActivityReport } from '@/types/crm';
 import { cn } from '@/lib/utils';
+import { CompleteServiceModal } from './CompleteServiceModal';
 
 interface TaskModalProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
   const [showDismissOptions, setShowDismissOptions] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedDismissType, setSelectedDismissType] = useState<DismissType | null>(null);
+  const [showCompleteService, setShowCompleteService] = useState(false);
 
   const handleQuickTimeSelect = (minutes: number) => {
     setSelectedQuickTime(minutes);
@@ -94,6 +96,7 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
     setShowDismissOptions(false);
     setShowConfirmDialog(false);
     setSelectedDismissType(null);
+    setShowCompleteService(false);
   };
 
   const handleDismissClick = (type: DismissType) => {
@@ -312,6 +315,19 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
                 </div>
               )}
             </div>
+
+            {/* Complete Service Shortcut */}
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-primary text-primary hover:bg-primary/10"
+                onClick={() => setShowCompleteService(true)}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Concluir Atendimento (Capturar dados para campanhas)
+              </Button>
+            </div>
           </div>
 
           <div className="flex justify-end">
@@ -355,6 +371,13 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Complete Service Modal */}
+      <CompleteServiceModal
+        open={showCompleteService}
+        onClose={() => setShowCompleteService(false)}
+        conversation={conversation}
+      />
     </>
   );
 }
