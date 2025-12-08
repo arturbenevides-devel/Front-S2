@@ -184,7 +184,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   }
 
   return (
-    <div className="flex h-full flex-col border-l border-border bg-card">
+    <div className="flex h-full flex-col border-l border-border bg-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border p-4">
         <div className="flex items-center gap-2">
@@ -268,7 +268,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'suggestions' | 'chat')} className="flex-1 flex flex-col min-h-0">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'suggestions' | 'chat')} className="flex-1 flex flex-col overflow-hidden">
         <TabsList className="mx-3 mt-2 grid grid-cols-2 shrink-0">
           <TabsTrigger value="suggestions" className="gap-1.5 text-xs">
             <Sparkles className="h-3 w-3" />
@@ -280,10 +280,9 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="suggestions" className="flex-1 overflow-hidden m-0 p-0 min-h-0">
-          <div className="overflow-y-auto p-3 scrollbar-thin h-full">
-            {/* AI Status */}
-            <div className="mb-3 rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-2">
+        <TabsContent value="suggestions" className="overflow-auto mt-0 px-3 pb-3 pt-2">
+          {/* AI Status */}
+          <div className="mb-3 rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-2">
               <div className="flex items-center gap-2">
                 <div className={cn(
                   'h-2 w-2 rounded-full',
@@ -469,10 +468,9 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                 </p>
               </div>
             )}
-          </div>
         </TabsContent>
 
-        <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0 p-0">
+        <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden mt-0">
           {/* Chat Messages */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {chatMessages.length === 0 && (
