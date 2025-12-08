@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 interface CompleteServiceModalProps {
   open: boolean;
   onClose: () => void;
+  onComplete?: () => void; // Called when service is fully completed to close parent modals
   conversation: Conversation | null;
   capturedData?: {
     origin?: string;
@@ -38,6 +39,7 @@ const interestSuggestions = [
 export function CompleteServiceModal({ 
   open, 
   onClose, 
+  onComplete,
   conversation,
   capturedData 
 }: CompleteServiceModalProps) {
@@ -138,9 +140,10 @@ export function CompleteServiceModal({
     setIsSaving(false);
     setSaved(true);
     
-    // Auto close after success
+    // Auto close after success and notify parent
     setTimeout(() => {
       handleClose();
+      onComplete?.(); // Close parent modal too
     }, 1500);
   };
 
