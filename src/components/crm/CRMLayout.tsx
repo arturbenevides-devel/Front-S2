@@ -9,16 +9,19 @@ import { TaskManagement } from './TaskManagement';
 import { AdminPanel } from './AdminPanel';
 import { SupervisionPanel } from './SupervisionPanel';
 import { UnresponsedAlert } from './UnresponsedAlert';
+import { GamificationDashboard } from './gamification/GamificationDashboard';
+import { AgentProfile } from './gamification/AgentProfile';
+import { currentAgent } from '@/data/gamificationData';
 import { Conversation, Message, CustomerTask, DismissedActivityReport } from '@/types/crm';
 import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
-import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
-type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision';
+type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision' | 'gamification';
 type MobilePanel = 'list' | 'chat' | 'ai';
 
 // Mock initial tasks for demonstration
@@ -420,6 +423,19 @@ export function CRMLayout() {
               <Eye className="w-4 h-4" />
               Supervisão
             </Button>
+            <Button
+              variant={viewMode === 'gamification' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('gamification')}
+              className="flex-1 gap-2"
+            >
+              <Gamepad2 className="w-4 h-4" />
+              Gamificação
+            </Button>
+          </div>
+          {/* Agent Profile Mini */}
+          <div className="px-3 pb-3">
+            <AgentProfile agent={currentAgent} compact />
           </div>
           <div className="flex-1 overflow-hidden">
             <ConversationList
@@ -472,6 +488,8 @@ export function CRMLayout() {
             dismissedReports={dismissedReports}
             onViewConversation={handleNavigateToTask}
           />
+        ) : viewMode === 'gamification' ? (
+          <GamificationDashboard />
         ) : (
           <MetricsDashboard />
         )}
