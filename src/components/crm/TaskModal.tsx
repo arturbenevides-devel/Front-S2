@@ -379,6 +379,12 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
       <CompleteServiceModal
         open={showCompleteService}
         onClose={() => setShowCompleteService(false)}
+        onComplete={() => {
+          // Close CompleteService modal and TaskModal after completion
+          setShowCompleteService(false);
+          resetForm();
+          onClose();
+        }}
         conversation={conversation}
       />
     </>
