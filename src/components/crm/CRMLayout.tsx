@@ -11,10 +11,12 @@ import { SupervisionPanel } from './SupervisionPanel';
 import { Conversation, Message, CustomerTask, DismissedActivityReport } from '@/types/crm';
 import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart3, MessageSquare, ListTodo, Settings, Eye } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision';
+type MobilePanel = 'list' | 'chat' | 'ai';
 
 // Mock initial tasks for demonstration
 const initialTasks: CustomerTask[] = [
@@ -72,6 +74,8 @@ export function CRMLayout() {
   const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>(initialDismissedReports);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [pendingConversationChange, setPendingConversationChange] = useState<Conversation | null>(null);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('list');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { toast } = useToast();
 
   // Check for due tasks periodically
@@ -98,6 +102,7 @@ export function CRMLayout() {
     );
     setSelectedConversation({ ...conversation, unreadCount: 0 });
     setViewMode('chat');
+    setMobilePanel('chat');
   }, [selectedConversation]);
 
   const handleSendMessage = (content: string) => {
@@ -256,108 +261,295 @@ export function CRMLayout() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Conversations Sidebar - 320px */}
-      <div className="w-80 shrink-0 flex flex-col">
-        {/* Navigation Tabs */}
-        <div className="p-3 border-b border-border bg-card flex flex-col gap-2">
-          <div className="flex gap-2">
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex w-full">
+        {/* Conversations Sidebar - 320px */}
+        <div className="w-80 shrink-0 flex flex-col">
+          {/* Navigation Tabs */}
+          <div className="p-3 border-b border-border bg-card flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'chat' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('chat')}
+                className="flex-1 gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Conversas
+              </Button>
+              <Button
+                variant={viewMode === 'tasks' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('tasks')}
+                className="flex-1 gap-2"
+              >
+                <ListTodo className="w-4 h-4" />
+                Tarefas
+              </Button>
+            </div>
             <Button
-              variant={viewMode === 'chat' ? 'default' : 'ghost'}
+              variant={viewMode === 'dashboard' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setViewMode('chat')}
+              onClick={() => setViewMode('dashboard')}
               className="flex-1 gap-2"
             >
-              <MessageSquare className="w-4 h-4" />
-              Conversas
+              <BarChart3 className="w-4 h-4" />
+              Métricas
             </Button>
             <Button
-              variant={viewMode === 'tasks' ? 'default' : 'ghost'}
+              variant={viewMode === 'admin' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setViewMode('tasks')}
+              onClick={() => setViewMode('admin')}
               className="flex-1 gap-2"
             >
-              <ListTodo className="w-4 h-4" />
-              Tarefas
+              <Settings className="w-4 h-4" />
+              Admin
+            </Button>
+            <Button
+              variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('supervision')}
+              className="flex-1 gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Supervisão
             </Button>
           </div>
-          <Button
-            variant={viewMode === 'dashboard' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('dashboard')}
-            className="flex-1 gap-2"
-          >
-            <BarChart3 className="w-4 h-4" />
-            Métricas
-          </Button>
-          <Button
-            variant={viewMode === 'admin' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('admin')}
-            className="flex-1 gap-2"
-          >
-            <Settings className="w-4 h-4" />
-            Admin
-          </Button>
-          <Button
-            variant={viewMode === 'supervision' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('supervision')}
-            className="flex-1 gap-2"
-          >
-            <Eye className="w-4 h-4" />
-            Supervisão
-          </Button>
+          <div className="flex-1 overflow-hidden">
+            <ConversationList
+              conversations={conversations}
+              selectedId={selectedConversation?.id || null}
+              onSelect={handleSelectConversation}
+            />
+          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <ConversationList
-            conversations={conversations}
-            selectedId={selectedConversation?.id || null}
-            onSelect={handleSelectConversation}
+
+        {/* Main Content Area */}
+        {viewMode === 'chat' ? (
+          <>
+            {/* Chat Window - Flex grow */}
+            <div className="flex-1 min-w-0">
+              <ChatWindow
+                conversation={selectedConversation}
+                onSendMessage={handleSendMessage}
+              />
+            </div>
+
+            {/* AI Panel - 340px */}
+            <div className="w-[340px] shrink-0">
+              <AIPanel
+                conversation={selectedConversation}
+                suggestions={mockAISuggestions}
+                packages={mockPackages}
+                onUseSuggestion={handleUseSuggestion}
+                aiEnabled={selectedConversation?.aiEnabled ?? true}
+                onToggleAI={handleToggleAI}
+              />
+            </div>
+          </>
+        ) : viewMode === 'tasks' ? (
+          <TaskManagement
+            tasks={tasks}
+            onComplete={handleCompleteTask}
+            onNavigate={handleNavigateToTask}
           />
-        </div>
+        ) : viewMode === 'admin' ? (
+          <AdminPanel />
+        ) : viewMode === 'supervision' ? (
+          <SupervisionPanel
+            conversations={conversations}
+            tasks={tasks}
+            dismissedReports={dismissedReports}
+            onViewConversation={handleNavigateToTask}
+          />
+        ) : (
+          <MetricsDashboard />
+        )}
       </div>
 
-      {/* Main Content Area */}
-      {viewMode === 'chat' ? (
-        <>
-          {/* Chat Window - Flex grow */}
-          <div className="flex-1 min-w-0">
-            <ChatWindow
-              conversation={selectedConversation}
-              onSendMessage={handleSendMessage}
-            />
+      {/* Mobile Layout */}
+      <div className="flex lg:hidden flex-col w-full h-full">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
+          <div className="flex items-center gap-2">
+            {mobilePanel !== 'list' && viewMode === 'chat' && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setMobilePanel('list')}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+            <h1 className="text-lg font-semibold text-foreground">
+              {viewMode === 'chat' 
+                ? (mobilePanel === 'list' ? 'Conversas' : mobilePanel === 'ai' ? 'Assistente IA' : selectedConversation?.contact.name || 'Chat')
+                : viewMode === 'tasks' ? 'Tarefas'
+                : viewMode === 'dashboard' ? 'Métricas'
+                : viewMode === 'admin' ? 'Administração'
+                : 'Supervisão'
+              }
+            </h1>
           </div>
+          <div className="flex items-center gap-2">
+            {viewMode === 'chat' && mobilePanel === 'chat' && selectedConversation && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setMobilePanel('ai')}
+              >
+                <Sparkles className="h-5 w-5 text-primary" />
+              </Button>
+            )}
+            <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+              <SheetTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px] p-0">
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center justify-between p-4 border-b border-border">
+                    <span className="font-semibold text-foreground">Menu</span>
+                  </div>
+                  <div className="flex flex-col gap-1 p-3">
+                    <Button
+                      variant={viewMode === 'chat' ? 'default' : 'ghost'}
+                      className="justify-start gap-3"
+                      onClick={() => { setViewMode('chat'); setMobilePanel('list'); setShowMobileMenu(false); }}
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                      Conversas
+                    </Button>
+                    <Button
+                      variant={viewMode === 'tasks' ? 'default' : 'ghost'}
+                      className="justify-start gap-3"
+                      onClick={() => { setViewMode('tasks'); setShowMobileMenu(false); }}
+                    >
+                      <ListTodo className="w-5 h-5" />
+                      Tarefas
+                    </Button>
+                    <Button
+                      variant={viewMode === 'dashboard' ? 'default' : 'ghost'}
+                      className="justify-start gap-3"
+                      onClick={() => { setViewMode('dashboard'); setShowMobileMenu(false); }}
+                    >
+                      <BarChart3 className="w-5 h-5" />
+                      Métricas
+                    </Button>
+                    <Button
+                      variant={viewMode === 'admin' ? 'default' : 'ghost'}
+                      className="justify-start gap-3"
+                      onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
+                    >
+                      <Settings className="w-5 h-5" />
+                      Administração
+                    </Button>
+                    <Button
+                      variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+                      className="justify-start gap-3"
+                      onClick={() => { setViewMode('supervision'); setShowMobileMenu(false); }}
+                    >
+                      <Eye className="w-5 h-5" />
+                      Supervisão
+                    </Button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
 
-          {/* AI Panel - 340px */}
-          <div className="w-[340px] shrink-0">
-            <AIPanel
-              conversation={selectedConversation}
-              suggestions={mockAISuggestions}
-              packages={mockPackages}
-              onUseSuggestion={handleUseSuggestion}
-              aiEnabled={selectedConversation?.aiEnabled ?? true}
-              onToggleAI={handleToggleAI}
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-hidden">
+          {viewMode === 'chat' ? (
+            <>
+              {mobilePanel === 'list' && (
+                <ConversationList
+                  conversations={conversations}
+                  selectedId={selectedConversation?.id || null}
+                  onSelect={handleSelectConversation}
+                />
+              )}
+              {mobilePanel === 'chat' && (
+                <ChatWindow
+                  conversation={selectedConversation}
+                  onSendMessage={handleSendMessage}
+                />
+              )}
+              {mobilePanel === 'ai' && (
+                <AIPanel
+                  conversation={selectedConversation}
+                  suggestions={mockAISuggestions}
+                  packages={mockPackages}
+                  onUseSuggestion={handleUseSuggestion}
+                  aiEnabled={selectedConversation?.aiEnabled ?? true}
+                  onToggleAI={handleToggleAI}
+                />
+              )}
+            </>
+          ) : viewMode === 'tasks' ? (
+            <TaskManagement
+              tasks={tasks}
+              onComplete={handleCompleteTask}
+              onNavigate={handleNavigateToTask}
             />
+          ) : viewMode === 'admin' ? (
+            <AdminPanel />
+          ) : viewMode === 'supervision' ? (
+            <SupervisionPanel
+              conversations={conversations}
+              tasks={tasks}
+              dismissedReports={dismissedReports}
+              onViewConversation={handleNavigateToTask}
+            />
+          ) : (
+            <MetricsDashboard />
+          )}
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="border-t border-border bg-card px-2 py-2 safe-area-bottom">
+          <div className="flex justify-around">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'chat' ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => { setViewMode('chat'); setMobilePanel('list'); }}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-xs">Conversas</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'tasks' ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setViewMode('tasks')}
+            >
+              <ListTodo className="w-5 h-5" />
+              <span className="text-xs">Tarefas</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'dashboard' ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setViewMode('dashboard')}
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span className="text-xs">Métricas</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'admin' ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setViewMode('admin')}
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-xs">Admin</span>
+            </Button>
           </div>
-        </>
-      ) : viewMode === 'tasks' ? (
-        <TaskManagement
-          tasks={tasks}
-          onComplete={handleCompleteTask}
-          onNavigate={handleNavigateToTask}
-        />
-      ) : viewMode === 'admin' ? (
-        <AdminPanel />
-      ) : viewMode === 'supervision' ? (
-        <SupervisionPanel
-          conversations={conversations}
-          tasks={tasks}
-          dismissedReports={dismissedReports}
-          onViewConversation={handleNavigateToTask}
-        />
-      ) : (
-        <MetricsDashboard />
-      )}
+        </div>
+      </div>
 
       {/* Task Modal */}
       <TaskModal

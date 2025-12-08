@@ -102,15 +102,15 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
   return (
     <div className="flex h-full flex-col bg-chat-bg">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">
+      <div className="flex items-center justify-between border-b border-border bg-card px-3 sm:px-4 py-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
+            <AvatarFallback className="bg-primary/10 text-primary font-medium text-sm">
               {conversation.contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <h3 className="font-semibold text-foreground">{conversation.contact.name}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{conversation.contact.name}</h3>
             <div className="flex items-center gap-2">
               {conversation.contact.status === 'online' ? (
                 <span className="flex items-center gap-1 text-xs text-success">
@@ -118,43 +118,60 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
                   Online
                 </span>
               ) : (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground truncate">
                   {conversation.contact.lastSeen || 'Offline'}
                 </span>
               )}
-              {conversation.contact.tags?.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
+              <div className="hidden sm:flex items-center gap-2">
+                {conversation.contact.tags?.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Button 
             size="sm" 
             variant="outline" 
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs hidden sm:flex"
             onClick={() => setShowImageReader(true)}
           >
             <ScanText className="h-4 w-4" />
-            Ler Imagens
+            <span className="hidden md:inline">Ler Imagens</span>
+          </Button>
+          <Button 
+            size="icon" 
+            variant="outline" 
+            className="sm:hidden h-8 w-8"
+            onClick={() => setShowImageReader(true)}
+          >
+            <ScanText className="h-4 w-4" />
           </Button>
           <Button 
             size="sm" 
-            className="gap-1.5 text-xs bg-success hover:bg-success/90"
+            className="gap-1.5 text-xs bg-success hover:bg-success/90 hidden sm:flex"
             onClick={() => setShowCompleteSale(true)}
           >
             <ShoppingCart className="h-4 w-4" />
-            Concluir Venda
+            <span className="hidden md:inline">Concluir Venda</span>
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+          <Button 
+            size="icon" 
+            className="sm:hidden h-8 w-8 bg-success hover:bg-success/90"
+            onClick={() => setShowCompleteSale(true)}
+          >
+            <ShoppingCart className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary hidden sm:flex h-8 w-8">
             <Phone className="h-5 w-5" />
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary hidden sm:flex h-8 w-8">
             <Video className="h-5 w-5" />
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8">
             <MoreVertical className="h-5 w-5" />
           </Button>
         </div>
@@ -170,12 +187,12 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border bg-card p-3">
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+      <div className="border-t border-border bg-card p-2 sm:p-3">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10 hidden sm:flex">
             <Smile className="h-5 w-5" />
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
             <Paperclip className="h-5 w-5" />
           </Button>
           <Input
@@ -183,14 +200,14 @@ export function ChatWindow({ conversation, onSendMessage }: ChatWindowProps) {
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Digite uma mensagem..."
-            className="flex-1 bg-muted/50 border-transparent focus:border-primary"
+            className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
           />
           {message.trim() ? (
-            <Button size="icon" onClick={handleSend} className="bg-primary hover:bg-primary/90">
-              <Send className="h-5 w-5" />
+            <Button size="icon" onClick={handleSend} className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10">
+              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           ) : (
-            <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+            <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
               <Mic className="h-5 w-5" />
             </Button>
           )}
