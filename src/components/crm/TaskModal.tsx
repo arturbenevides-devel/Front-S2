@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar, Clock, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, Timer } from 'lucide-react';
 import { TaskStatus, CustomerTask, Conversation } from '@/types/crm';
+import { cn } from '@/lib/utils';
 
 interface TaskModalProps {
   open: boolean;
@@ -22,16 +23,46 @@ const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
   { value: 'vendido', label: 'Vendido', color: 'bg-success' },
 ];
 
+const quickTimeOptions = [
+  { minutes: 5, label: '5 min' },
+  { minutes: 10, label: '10 min' },
+  { minutes: 15, label: '15 min' },
+  { minutes: 30, label: '30 min' },
+];
+
 export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProps) {
   const [status, setStatus] = useState<TaskStatus>('em_orcamento');
   const [nextStep, setNextStep] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
+  const [useQuickTime, setUseQuickTime] = useState(true);
+  const [selectedQuickTime, setSelectedQuickTime] = useState<number | null>(null);
+
+  const handleQuickTimeSelect = (minutes: number) => {
+    setSelectedQuickTime(minutes);
+    setUseQuickTime(true);
+    // Clear manual date/time
+    setScheduledDate('');
+    setScheduledTime('');
+  };
+
+  const handleManualTimeChange = () => {
+    setUseQuickTime(false);
+    setSelectedQuickTime(null);
+  };
 
   const handleSubmit = () => {
-    if (!conversation || !nextStep || !scheduledDate || !scheduledTime) return;
+    if (!conversation || !nextStep) return;
 
-    const dateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+    let dateTime: Date;
+    
+    if (useQuickTime && selectedQuickTime) {
+      dateTime = new Date(Date.now() + selectedQuickTime * 60 * 1000);
+    } else if (scheduledDate && scheduledTime) {
+      dateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+    } else {
+      return;
+    }
     
     onSave({
       conversationId: conversation.id,
@@ -45,10 +76,12 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
     setNextStep('');
     setScheduledDate('');
     setScheduledTime('');
+    setSelectedQuickTime(null);
+    setUseQuickTime(true);
     onClose();
   };
 
-  const isFormValid = nextStep && scheduledDate && scheduledTime;
+  const isFormValid = nextStep && (selectedQuickTime || (scheduledDate && scheduledTime));
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -105,32 +138,70 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
             />
           </div>
 
-          {/* Schedule Date and Time */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="date" className="text-sm font-medium flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                Data
-              </Label>
-              <Input
-                id="date"
-                type="date"
-                value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
+          {/* Quick Time Options */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-1">
+              <Timer className="h-3.5 w-3.5" />
+              Retornar Atendimento
+            </Label>
+            <div className="grid grid-cols-4 gap-2">
+              {quickTimeOptions.map((option) => (
+                <Button
+                  key={option.minutes}
+                  type="button"
+                  variant={selectedQuickTime === option.minutes ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleQuickTimeSelect(option.minutes)}
+                  className={cn(
+                    "h-10",
+                    selectedQuickTime === option.minutes && "ring-2 ring-primary ring-offset-2"
+                  )}
+                >
+                  {option.label}
+                </Button>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="time" className="text-sm font-medium flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                Horário
-              </Label>
-              <Input
-                id="time"
-                type="time"
-                value={scheduledTime}
-                onChange={(e) => setScheduledTime(e.target.value)}
-              />
+          </div>
+
+          {/* Manual Date/Time Option */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">ou agende manualmente</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-sm font-medium flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Data
+                </Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => {
+                    setScheduledDate(e.target.value);
+                    handleManualTimeChange();
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="time" className="text-sm font-medium flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  Horário
+                </Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => {
+                    setScheduledTime(e.target.value);
+                    handleManualTimeChange();
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
