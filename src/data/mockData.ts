@@ -14,6 +14,7 @@ export const mockConversations: Conversation[] = [
     lastMessageTime: '10:30',
     unreadCount: 2,
     category: 'lead',
+    readStatus: 'pending',
     messages: [
       {
         id: 'm1',
@@ -47,6 +48,7 @@ export const mockConversations: Conversation[] = [
     lastMessageTime: '09:45',
     unreadCount: 0,
     category: 'booking',
+    readStatus: 'read',
     messages: [
       {
         id: 'm3',
@@ -88,6 +90,7 @@ export const mockConversations: Conversation[] = [
     lastMessageTime: 'Ontem',
     unreadCount: 1,
     category: 'lead',
+    readStatus: 'unread',
     messages: [
       {
         id: 'm6',
@@ -119,6 +122,7 @@ export const mockConversations: Conversation[] = [
     lastMessageTime: 'Ontem',
     unreadCount: 0,
     category: 'support',
+    readStatus: 'read',
     messages: [
       {
         id: 'm8',
@@ -151,12 +155,38 @@ export const mockConversations: Conversation[] = [
     lastMessageTime: 'Seg',
     unreadCount: 0,
     category: 'followup',
+    readStatus: 'read',
     messages: [
       {
         id: 'm10',
         conversationId: '5',
         content: 'Vou pensar e retorno amanhã',
         timestamp: 'Segunda 14:00',
+        sender: 'contact',
+        type: 'text',
+      },
+    ],
+  },
+  {
+    id: '6',
+    contact: {
+      id: 'c6',
+      name: 'Paula Rodrigues',
+      phone: '+55 11 94444-1234',
+      status: 'online',
+      tags: ['Novo Lead'],
+    },
+    lastMessage: 'Boa tarde! Quero saber sobre viagens para Europa',
+    lastMessageTime: '14:20',
+    unreadCount: 1,
+    category: 'lead',
+    readStatus: 'pending',
+    messages: [
+      {
+        id: 'm11',
+        conversationId: '6',
+        content: 'Boa tarde! Quero saber sobre viagens para Europa',
+        timestamp: '14:20',
         sender: 'contact',
         type: 'text',
       },
@@ -223,6 +253,7 @@ export const sdrConversation: Conversation = {
   lastMessageTime: '11:45',
   unreadCount: 0,
   category: 'lead',
+  readStatus: 'unread',
   messages: [
     { id: 'sdr-1', conversationId: 'sdr-1', content: 'Olá! Vi a promoção de vocês para o Caribe', timestamp: '11:20', sender: 'contact', type: 'text' },
     { id: 'sdr-2', conversationId: 'sdr-1', content: '🤖 Olá Roberto! Que bom receber seu contato! Sou a assistente virtual da agência. Para oferecer as melhores opções, posso fazer algumas perguntas rápidas?', timestamp: '11:20', sender: 'user', type: 'text', status: 'read' },

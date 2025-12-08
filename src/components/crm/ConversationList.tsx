@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Search, Filter, MessageSquarePlus, X, Tag } from 'lucide-react';
+import { Search, Filter, MessageSquarePlus, X, Tag, Clock, CheckCheck, Circle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Conversation } from '@/types/crm';
+import { Conversation, ConversationReadStatus } from '@/types/crm';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Popover,
@@ -16,6 +16,7 @@ interface ConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
   onSelect: (conversation: Conversation) => void;
+  onClaimConversation?: (conversationId: string) => void;
 }
 
 const categoryColors = {
@@ -32,6 +33,15 @@ const categoryLabels = {
   followup: 'Follow-up',
 };
 
+type StatusFilter = 'all' | ConversationReadStatus;
+
+const statusFilters: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
+  { value: 'all', label: 'Todas', icon: null },
+  { value: 'pending', label: 'Pendentes', icon: <Clock className="h-3 w-3" /> },
+  { value: 'unread', label: 'Não lidas', icon: <Circle className="h-3 w-3 fill-current" /> },
+  { value: 'read', label: 'Lidas', icon: <CheckCheck className="h-3 w-3" /> },
+];
+
 // Collect all unique tags from conversations
 const getAllTags = (conversations: Conversation[]): string[] => {
   const tagsSet = new Set<string>();
@@ -41,10 +51,11 @@ const getAllTags = (conversations: Conversation[]): string[] => {
   return Array.from(tagsSet).sort();
 };
 
-export function ConversationList({ conversations, selectedId, onSelect }: ConversationListProps) {
+export function ConversationList({ conversations, selectedId, onSelect, onClaimConversation }: ConversationListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const allTags = getAllTags(conversations);
 
@@ -57,6 +68,15 @@ export function ConversationList({ conversations, selectedId, onSelect }: Conver
   const clearFilters = () => {
     setSelectedTags([]);
     setSearchQuery('');
+    setStatusFilter('all');
+  };
+
+  // Count conversations by status
+  const statusCounts = {
+    all: conversations.length,
+    pending: conversations.filter((c) => c.readStatus === 'pending').length,
+    unread: conversations.filter((c) => c.readStatus === 'unread').length,
+    read: conversations.filter((c) => c.readStatus === 'read').length,
   };
 
   const filteredConversations = conversations.filter((conv) => {
@@ -69,10 +89,21 @@ export function ConversationList({ conversations, selectedId, onSelect }: Conver
       selectedTags.length === 0 ||
       selectedTags.some((tag) => conv.contact.tags?.includes(tag));
 
-    return matchesSearch && matchesTags;
+    const matchesStatus =
+      statusFilter === 'all' || conv.readStatus === statusFilter;
+
+    return matchesSearch && matchesTags && matchesStatus;
   });
 
-  const hasActiveFilters = selectedTags.length > 0 || searchQuery !== '';
+  const hasActiveFilters = selectedTags.length > 0 || searchQuery !== '' || statusFilter !== 'all';
+
+  const handleConversationClick = (conversation: Conversation) => {
+    // If conversation is pending, claim it first
+    if (conversation.readStatus === 'pending' && onClaimConversation) {
+      onClaimConversation(conversation.id);
+    }
+    onSelect(conversation);
+  };
 
   return (
     <div className="flex h-full flex-col border-r border-border bg-card">
@@ -82,6 +113,37 @@ export function ConversationList({ conversations, selectedId, onSelect }: Conver
         <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
           <MessageSquarePlus className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
+      </div>
+
+      {/* Status Filter Tabs */}
+      <div className="flex gap-1 px-2 py-1.5 border-b border-border overflow-x-auto scrollbar-none">
+        {statusFilters.map((filter) => (
+          <Button
+            key={filter.value}
+            size="sm"
+            variant={statusFilter === filter.value ? 'default' : 'ghost'}
+            className={cn(
+              'h-7 px-2.5 text-xs whitespace-nowrap gap-1.5',
+              statusFilter === filter.value 
+                ? 'bg-primary text-primary-foreground' 
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            onClick={() => setStatusFilter(filter.value)}
+          >
+            {filter.icon}
+            {filter.label}
+            {statusCounts[filter.value] > 0 && (
+              <span className={cn(
+                'ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium',
+                statusFilter === filter.value
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+              )}>
+                {statusCounts[filter.value]}
+              </span>
+            )}
+          </Button>
+        ))}
       </div>
 
       {/* Search and Filter */}
@@ -194,10 +256,11 @@ export function ConversationList({ conversations, selectedId, onSelect }: Conver
           filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
-              onClick={() => onSelect(conversation)}
+              onClick={() => handleConversationClick(conversation)}
               className={cn(
                 'flex cursor-pointer gap-2 sm:gap-3 border-b border-border/50 p-2 sm:p-3 transition-colors hover:bg-muted/50',
-                selectedId === conversation.id && 'bg-primary/5 hover:bg-primary/10'
+                selectedId === conversation.id && 'bg-primary/5 hover:bg-primary/10',
+                conversation.readStatus === 'pending' && 'bg-warning/5 border-l-2 border-l-warning'
               )}
             >
               {/* Avatar */}
