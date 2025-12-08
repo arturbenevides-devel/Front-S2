@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map } from 'lucide-react';
+import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map, Zap, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { QuoteSearchModal } from './QuoteSearchModal';
 import { QuoteGeneratorModal } from './QuoteGeneratorModal';
 import { ItineraryCreatorModal } from './ItineraryCreatorModal';
+import { PDFExportModal } from './PDFExportModal';
 
 interface AIPanelProps {
   conversation: Conversation | null;
@@ -57,7 +58,9 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   const [showQuoteSearch, setShowQuoteSearch] = useState(false);
   const [showQuoteGenerator, setShowQuoteGenerator] = useState(false);
   const [showItineraryCreator, setShowItineraryCreator] = useState(false);
+  const [showPDFExport, setShowPDFExport] = useState(false);
   const [quoteGeneratorData, setQuoteGeneratorData] = useState<{ type: string; title: string; details: string; price?: number } | undefined>();
+  const [autopilotEnabled, setAutopilotEnabled] = useState(false);
 
   // Mock AI analysis for pre-filling search
   const aiAnalysis = conversation ? {
@@ -189,7 +192,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
       </div>
 
       {/* AI Toggle */}
-      <div className="border-b border-border p-3">
+      <div className="border-b border-border p-3 space-y-2">
         <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
           <div className="flex items-center gap-2">
             <Power className={cn("h-4 w-4", aiEnabled ? "text-success" : "text-muted-foreground")} />
@@ -201,6 +204,33 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
             id="ai-toggle"
             checked={aiEnabled}
             onCheckedChange={onToggleAI}
+          />
+        </div>
+        
+        {/* Autopilot Toggle */}
+        <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-3 border border-primary/20">
+          <div className="flex items-center gap-2">
+            <Zap className={cn("h-4 w-4", autopilotEnabled ? "text-warning animate-pulse" : "text-muted-foreground")} />
+            <div>
+              <Label htmlFor="autopilot-toggle" className="text-sm font-medium cursor-pointer">
+                Piloto Automático
+              </Label>
+              <p className="text-xs text-muted-foreground">IA responde diretamente</p>
+            </div>
+          </div>
+          <Switch
+            id="autopilot-toggle"
+            checked={autopilotEnabled}
+            onCheckedChange={(checked) => {
+              setAutopilotEnabled(checked);
+              if (checked) {
+                onToggleAI(true);
+                toast({
+                  title: "Piloto Automático Ativado",
+                  description: "A IA responderá automaticamente aos clientes.",
+                });
+              }
+            }}
           />
         </div>
       </div>
@@ -342,9 +372,14 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                       <CreditCard className="h-4 w-4 text-primary" />
                       <span className="text-xs">Gerar Orçamento</span>
                     </Button>
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-3">
-                      <User className="h-4 w-4 text-primary" />
-                      <span className="text-xs">Perfil Cliente</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-auto flex-col gap-1 py-3"
+                      onClick={() => setShowPDFExport(true)}
+                    >
+                      <FileDown className="h-4 w-4 text-primary" />
+                      <span className="text-xs">Exportar PDF</span>
                     </Button>
                   </div>
                 </div>
@@ -495,6 +530,11 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
         open={showItineraryCreator}
         onClose={() => setShowItineraryCreator(false)}
         onGenerateQuote={handleGenerateQuoteFromItinerary}
+      />
+
+      <PDFExportModal
+        open={showPDFExport}
+        onClose={() => setShowPDFExport(false)}
       />
     </div>
   );

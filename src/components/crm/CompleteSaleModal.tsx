@@ -14,13 +14,21 @@ import { Separator } from '@/components/ui/separator';
 interface CompleteSaleModalProps {
   open: boolean;
   onClose: () => void;
-  contactName: string;
+  contactName?: string;
   capturedData?: {
     name?: string;
     cpf?: string;
     birthDate?: string;
     email?: string;
     phone?: string;
+  };
+  capturedClientData?: {
+    name?: string;
+    cpf?: string;
+    birthDate?: string;
+  };
+  conversation?: {
+    contact: { name: string };
   };
   quotes?: Array<{
     id: string;
@@ -29,18 +37,29 @@ interface CompleteSaleModalProps {
   }>;
 }
 
-export function CompleteSaleModal({ open, onClose, contactName, capturedData, quotes = [] }: CompleteSaleModalProps) {
+export function CompleteSaleModal({ open, onClose, contactName, capturedData, capturedClientData, conversation, quotes = [] }: CompleteSaleModalProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
   const [isProcessing, setIsProcessing] = useState(false);
   
+  // Merge capturedData and capturedClientData for pre-filling
+  const mergedCapturedData = {
+    name: capturedData?.name || capturedClientData?.name,
+    cpf: capturedData?.cpf || capturedClientData?.cpf,
+    birthDate: capturedData?.birthDate || capturedClientData?.birthDate,
+    email: capturedData?.email,
+    phone: capturedData?.phone,
+  };
+  
+  const resolvedContactName = contactName || conversation?.contact?.name || '';
+  
   // Customer data (pre-filled from document capture)
   const [customerData, setCustomerData] = useState({
-    fullName: capturedData?.name || contactName,
-    cpf: capturedData?.cpf || '',
-    birthDate: capturedData?.birthDate || '',
-    email: capturedData?.email || '',
-    phone: capturedData?.phone || '',
+    fullName: mergedCapturedData.name || resolvedContactName,
+    cpf: mergedCapturedData.cpf || '',
+    birthDate: mergedCapturedData.birthDate || '',
+    email: mergedCapturedData.email || '',
+    phone: mergedCapturedData.phone || '',
   });
 
   // Sale data

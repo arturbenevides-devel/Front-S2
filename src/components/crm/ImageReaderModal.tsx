@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ImageReaderModalProps {
   open: boolean;
   onClose: () => void;
-  onDataExtracted: (data: ExtractedData) => void;
+  onDataExtracted?: (data: ExtractedData) => void;
 }
 
 interface ExtractedData {

@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 interface PDFExportModalProps {
   open: boolean;
   onClose: () => void;
-  type: 'quote' | 'itinerary';
+  type?: 'quote' | 'itinerary';
   data?: {
     title: string;
     items?: Array<{ description: string; price: number }>;
@@ -28,7 +28,7 @@ interface AgencyBranding {
   agencyWebsite: string;
 }
 
-export function PDFExportModal({ open, onClose, type, data }: PDFExportModalProps) {
+export function PDFExportModal({ open, onClose, type = 'quote', data }: PDFExportModalProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [branding, setBranding] = useState<AgencyBranding>({
