@@ -161,6 +161,27 @@ export function CRMLayout() {
     });
   };
 
+  const handleUpdateTags = (conversationId: string, tags: string[]) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conversationId
+          ? { ...c, contact: { ...c.contact, tags } }
+          : c
+      )
+    );
+    
+    if (selectedConversation?.id === conversationId) {
+      setSelectedConversation((prev) =>
+        prev ? { ...prev, contact: { ...prev.contact, tags } } : null
+      );
+    }
+    
+    toast({
+      title: 'Etiquetas atualizadas',
+      description: 'As etiquetas do cliente foram salvas.',
+    });
+  };
+
   const handleSaveTask = (taskData: Omit<CustomerTask, 'id' | 'createdAt' | 'completed' | 'contactName'>) => {
     if (!selectedConversation) return;
 
@@ -344,6 +365,7 @@ export function CRMLayout() {
                 onUseSuggestion={handleUseSuggestion}
                 aiEnabled={selectedConversation?.aiEnabled ?? true}
                 onToggleAI={handleToggleAI}
+                onUpdateTags={handleUpdateTags}
               />
             </div>
           </>
@@ -485,6 +507,7 @@ export function CRMLayout() {
                   onUseSuggestion={handleUseSuggestion}
                   aiEnabled={selectedConversation?.aiEnabled ?? true}
                   onToggleAI={handleToggleAI}
+                  onUpdateTags={handleUpdateTags}
                 />
               )}
             </>

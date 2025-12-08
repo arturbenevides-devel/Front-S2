@@ -15,6 +15,7 @@ import { QuoteSearchModal } from './QuoteSearchModal';
 import { QuoteGeneratorModal } from './QuoteGeneratorModal';
 import { ItineraryCreatorModal } from './ItineraryCreatorModal';
 import { PDFExportModal } from './PDFExportModal';
+import { TagManager } from './TagManager';
 
 interface AIPanelProps {
   conversation: Conversation | null;
@@ -23,6 +24,7 @@ interface AIPanelProps {
   onUseSuggestion: (suggestion: AISuggestion) => void;
   aiEnabled: boolean;
   onToggleAI: (enabled: boolean) => void;
+  onUpdateTags?: (conversationId: string, tags: string[]) => void;
 }
 
 const suggestionIcons = {
@@ -45,7 +47,7 @@ const mockAIResponses: Record<string, string> = {
   preco: "Para o destino mencionado, temos opções a partir de R$ 3.500 por pessoa (7 noites). Posso gerar um orçamento personalizado se desejar.",
 };
 
-export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, aiEnabled, onToggleAI }: AIPanelProps) {
+export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, aiEnabled, onToggleAI, onUpdateTags }: AIPanelProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'suggestions' | 'chat'>('suggestions');
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([]);
@@ -231,6 +233,14 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                 });
               }
             }}
+          />
+        </div>
+
+        {/* Tag Manager */}
+        <div className="border-b border-border p-3">
+          <TagManager
+            tags={conversation.contact.tags || []}
+            onTagsChange={(tags) => onUpdateTags?.(conversation.id, tags)}
           />
         </div>
       </div>
