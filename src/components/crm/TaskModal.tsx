@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar, Clock, CheckCircle2, Timer, DollarSign } from 'lucide-react';
-import { TaskStatus, CustomerTask, Conversation } from '@/types/crm';
+import { Calendar, Clock, CheckCircle2, Timer, DollarSign, XCircle, AlertTriangle } from 'lucide-react';
+import { TaskStatus, CustomerTask, Conversation, DismissType, DismissedActivityReport } from '@/types/crm';
 import { cn } from '@/lib/utils';
 
 interface TaskModalProps {
@@ -14,6 +15,7 @@ interface TaskModalProps {
   conversation: Conversation | null;
   onClose: () => void;
   onSave: (task: Omit<CustomerTask, 'id' | 'createdAt' | 'completed' | 'contactName'>) => void;
+  onDismiss?: (report: Omit<DismissedActivityReport, 'id' | 'dismissedAt'>) => void;
 }
 
 const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
@@ -30,7 +32,7 @@ const quickTimeOptions = [
   { minutes: 30, label: '30 min' },
 ];
 
-export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProps) {
+export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: TaskModalProps) {
   const [status, setStatus] = useState<TaskStatus>('em_orcamento');
   const [nextStep, setNextStep] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
@@ -38,11 +40,15 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
   const [useQuickTime, setUseQuickTime] = useState(true);
   const [selectedQuickTime, setSelectedQuickTime] = useState<number | null>(null);
   const [value, setValue] = useState('');
+  
+  // Dismiss states
+  const [showDismissOptions, setShowDismissOptions] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedDismissType, setSelectedDismissType] = useState<DismissType | null>(null);
 
   const handleQuickTimeSelect = (minutes: number) => {
     setSelectedQuickTime(minutes);
     setUseQuickTime(true);
-    // Clear manual date/time
     setScheduledDate('');
     setScheduledTime('');
   };
@@ -73,7 +79,11 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
       value: value ? parseFloat(value) : undefined,
     });
 
-    // Reset form
+    resetForm();
+    onClose();
+  };
+
+  const resetForm = () => {
     setStatus('em_orcamento');
     setNextStep('');
     setScheduledDate('');
@@ -81,6 +91,33 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
     setSelectedQuickTime(null);
     setUseQuickTime(true);
     setValue('');
+    setShowDismissOptions(false);
+    setShowConfirmDialog(false);
+    setSelectedDismissType(null);
+  };
+
+  const handleDismissClick = (type: DismissType) => {
+    setSelectedDismissType(type);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmDismiss = () => {
+    if (!conversation || !selectedDismissType || !onDismiss) return;
+
+    // Generate conversation summary from last few messages
+    const lastMessages = conversation.messages.slice(-3);
+    const summary = lastMessages.map(m => m.content).join(' | ').slice(0, 200);
+
+    onDismiss({
+      conversationId: conversation.id,
+      contactName: conversation.contact.name,
+      agentName: 'Atendente Atual', // In real app, get from auth
+      dismissType: selectedDismissType,
+      conversationSummary: summary || 'Sem mensagens recentes',
+    });
+
+    setShowConfirmDialog(false);
+    resetForm();
     onClose();
   };
 
@@ -88,160 +125,236 @@ export function TaskModal({ open, conversation, onClose, onSave }: TaskModalProp
   const isFormValid = nextStep && (selectedQuickTime || (scheduledDate && scheduledTime)) && (!isValueRequired || (value && parseFloat(value) > 0));
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-            Registrar Atividade
-          </DialogTitle>
-          <DialogDescription>
-            Antes de sair, registre o status e próximo passo para {conversation?.contact.name}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              Registrar Atividade
+            </DialogTitle>
+            <DialogDescription>
+              Antes de sair, registre o status e próximo passo para {conversation?.contact.name}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Status Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Status do Cliente</Label>
-            <RadioGroup
-              value={status}
-              onValueChange={(value) => setStatus(value as TaskStatus)}
-              className="grid grid-cols-2 gap-2"
-            >
-              {statusOptions.map((option) => (
-                <div key={option.value} className="flex items-center">
-                  <RadioGroupItem
-                    value={option.value}
-                    id={option.value}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={option.value}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border p-3 hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 transition-colors"
+          <div className="space-y-4 py-4">
+            {/* Status Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Status do Cliente</Label>
+              <RadioGroup
+                value={status}
+                onValueChange={(value) => setStatus(value as TaskStatus)}
+                className="grid grid-cols-2 gap-2"
+              >
+                {statusOptions.map((option) => (
+                  <div key={option.value} className="flex items-center">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={option.value}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={option.value}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border p-3 hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 transition-colors"
+                    >
+                      <div className={`h-2 w-2 rounded-full ${option.color}`} />
+                      <span className="text-sm">{option.label}</span>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {/* Value Field */}
+            <div className="space-y-2">
+              <Label htmlFor="value" className="text-sm font-medium flex items-center gap-1">
+                <DollarSign className="h-3.5 w-3.5" />
+                Valor {isValueRequired && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                id="value"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder={isValueRequired ? "Obrigatório para vendas" : "Valor da proposta (opcional)"}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                className={cn(isValueRequired && !value && "border-destructive")}
+              />
+              {isValueRequired && !value && (
+                <p className="text-xs text-destructive">Informe o valor da venda</p>
+              )}
+            </div>
+
+            {/* Next Step */}
+            <div className="space-y-2">
+              <Label htmlFor="nextStep" className="text-sm font-medium">
+                Próximo Passo
+              </Label>
+              <Textarea
+                id="nextStep"
+                placeholder="Descreva a próxima ação..."
+                value={nextStep}
+                onChange={(e) => setNextStep(e.target.value)}
+                className="min-h-[80px] resize-none"
+              />
+            </div>
+
+            {/* Quick Time Options */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-1">
+                <Timer className="h-3.5 w-3.5" />
+                Retornar Atendimento
+              </Label>
+              <div className="grid grid-cols-4 gap-2">
+                {quickTimeOptions.map((option) => (
+                  <Button
+                    key={option.minutes}
+                    type="button"
+                    variant={selectedQuickTime === option.minutes ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleQuickTimeSelect(option.minutes)}
+                    className={cn(
+                      "h-10",
+                      selectedQuickTime === option.minutes && "ring-2 ring-primary ring-offset-2"
+                    )}
                   >
-                    <div className={`h-2 w-2 rounded-full ${option.color}`} />
-                    <span className="text-sm">{option.label}</span>
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Manual Date/Time Option */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">ou agende manualmente</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="date" className="text-sm font-medium flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Data
                   </Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => {
+                      setScheduledDate(e.target.value);
+                      handleManualTimeChange();
+                    }}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
                 </div>
-              ))}
-            </RadioGroup>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="time" className="text-sm font-medium flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    Horário
+                  </Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => {
+                      setScheduledTime(e.target.value);
+                      handleManualTimeChange();
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
 
-          {/* Value Field */}
-          <div className="space-y-2">
-            <Label htmlFor="value" className="text-sm font-medium flex items-center gap-1">
-              <DollarSign className="h-3.5 w-3.5" />
-              Valor {isValueRequired && <span className="text-destructive">*</span>}
-            </Label>
-            <Input
-              id="value"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder={isValueRequired ? "Obrigatório para vendas" : "Valor da proposta (opcional)"}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className={cn(isValueRequired && !value && "border-destructive")}
-            />
-            {isValueRequired && !value && (
-              <p className="text-xs text-destructive">Informe o valor da venda</p>
-            )}
-          </div>
-
-          {/* Next Step */}
-          <div className="space-y-2">
-            <Label htmlFor="nextStep" className="text-sm font-medium">
-              Próximo Passo
-            </Label>
-            <Textarea
-              id="nextStep"
-              placeholder="Descreva a próxima ação..."
-              value={nextStep}
-              onChange={(e) => setNextStep(e.target.value)}
-              className="min-h-[80px] resize-none"
-            />
-          </div>
-
-          {/* Quick Time Options */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1">
-              <Timer className="h-3.5 w-3.5" />
-              Retornar Atendimento
-            </Label>
-            <div className="grid grid-cols-4 gap-2">
-              {quickTimeOptions.map((option) => (
+            {/* Dismiss Options */}
+            <div className="pt-2 border-t border-border">
+              {!showDismissOptions ? (
                 <Button
-                  key={option.minutes}
-                  type="button"
-                  variant={selectedQuickTime === option.minutes ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
-                  onClick={() => handleQuickTimeSelect(option.minutes)}
-                  className={cn(
-                    "h-10",
-                    selectedQuickTime === option.minutes && "ring-2 ring-primary ring-offset-2"
-                  )}
+                  className="w-full text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowDismissOptions(true)}
                 >
-                  {option.label}
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Dispensar registro
                 </Button>
-              ))}
+              ) : (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Opções de Dispensa</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDismissClick('permanent')}
+                    >
+                      Dispensar para sempre
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                      onClick={() => handleDismissClick('later')}
+                    >
+                      Informarei mais tarde
+                    </Button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => setShowDismissOptions(false)}
+                  >
+                    Voltar
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Manual Date/Time Option */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">ou agende manualmente</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="date" className="text-sm font-medium flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Data
-                </Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => {
-                    setScheduledDate(e.target.value);
-                    handleManualTimeChange();
-                  }}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time" className="text-sm font-medium flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Horário
-                </Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={scheduledTime}
-                  onChange={(e) => {
-                    setScheduledTime(e.target.value);
-                    handleManualTimeChange();
-                  }}
-                />
-              </div>
-            </div>
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!isFormValid}
+              className="w-full sm:w-auto"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Salvar e Continuar
+            </Button>
           </div>
-        </div>
+        </DialogContent>
+      </Dialog>
 
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleSubmit} 
-            disabled={!isFormValid}
-            className="w-full sm:w-auto"
-          >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Salvar e Continuar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Tem certeza?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedDismissType === 'permanent' 
+                ? 'Ao dispensar permanentemente, essa conversa será reportada à supervisão e não será solicitado novo registro de atividade.'
+                : 'Você está optando por informar a atividade posteriormente. A supervisão será notificada até que o registro seja feito.'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>
+              Não, voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDismiss}
+              className={selectedDismissType === 'permanent' ? 'bg-destructive hover:bg-destructive/90' : 'bg-amber-500 hover:bg-amber-600'}
+            >
+              Sim, confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

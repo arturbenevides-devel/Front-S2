@@ -67,3 +67,28 @@ export interface AIChatMessage {
   content: string;
   timestamp: Date;
 }
+
+export type DismissType = 'permanent' | 'later';
+
+export interface DismissedActivityReport {
+  id: string;
+  conversationId: string;
+  contactName: string;
+  agentName: string;
+  dismissType: DismissType;
+  reason?: string;
+  dismissedAt: Date;
+  conversationSummary: string;
+}
+
+export interface SupervisionReport {
+  totalConversations: number;
+  conversationsWithoutTasks: number;
+  dismissedActivities: DismissedActivityReport[];
+  agentStats: {
+    agentName: string;
+    totalDismissed: number;
+    permanentDismissals: number;
+    laterDismissals: number;
+  }[];
+}

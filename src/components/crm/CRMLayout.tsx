@@ -7,13 +7,14 @@ import { TaskModal } from './TaskModal';
 import { TaskReminder } from './TaskReminder';
 import { TaskManagement } from './TaskManagement';
 import { AdminPanel } from './AdminPanel';
-import { Conversation, Message, CustomerTask } from '@/types/crm';
+import { SupervisionPanel } from './SupervisionPanel';
+import { Conversation, Message, CustomerTask, DismissedActivityReport } from '@/types/crm';
 import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart3, MessageSquare, ListTodo, Settings } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo, Settings, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin';
+type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision';
 
 // Mock initial tasks for demonstration
 const initialTasks: CustomerTask[] = [
@@ -39,6 +40,28 @@ const initialTasks: CustomerTask[] = [
   },
 ];
 
+// Mock dismissed reports for demonstration
+const initialDismissedReports: DismissedActivityReport[] = [
+  {
+    id: 'dismiss-1',
+    conversationId: '3',
+    contactName: 'Pedro Almeida',
+    agentName: 'Carlos Silva',
+    dismissType: 'permanent',
+    dismissedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    conversationSummary: 'Cliente desistiu da viagem por motivos pessoais',
+  },
+  {
+    id: 'dismiss-2',
+    conversationId: '4',
+    contactName: 'Ana Costa',
+    agentName: 'Maria Santos',
+    dismissType: 'later',
+    dismissedAt: new Date(Date.now() - 1000 * 60 * 30),
+    conversationSummary: 'Aguardando retorno do cliente sobre datas',
+  },
+];
+
 export function CRMLayout() {
   const [conversations, setConversations] = useState<Conversation[]>(
     [...mockConversations, sdrConversation].map(c => ({ ...c, aiEnabled: true }))
@@ -46,6 +69,7 @@ export function CRMLayout() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [tasks, setTasks] = useState<CustomerTask[]>(initialTasks);
+  const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>(initialDismissedReports);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [pendingConversationChange, setPendingConversationChange] = useState<Conversation | null>(null);
   const { toast } = useToast();
@@ -201,6 +225,35 @@ export function CRMLayout() {
     }
   };
 
+  const handleDismissActivity = (report: Omit<DismissedActivityReport, 'id' | 'dismissedAt'>) => {
+    const newReport: DismissedActivityReport = {
+      ...report,
+      id: `dismiss-${Date.now()}`,
+      dismissedAt: new Date(),
+    };
+
+    setDismissedReports((prev) => [...prev, newReport]);
+
+    toast({
+      title: 'Registro dispensado',
+      description: report.dismissType === 'permanent' 
+        ? 'A supervisão foi notificada sobre esta dispensa.'
+        : 'Lembre-se de registrar a atividade posteriormente.',
+      variant: report.dismissType === 'permanent' ? 'destructive' : 'default',
+    });
+
+    // Complete the conversation change if pending
+    if (pendingConversationChange) {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === pendingConversationChange.id ? { ...c, unreadCount: 0 } : c
+        )
+      );
+      setSelectedConversation({ ...pendingConversationChange, unreadCount: 0 });
+      setPendingConversationChange(null);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Conversations Sidebar - 320px */}
@@ -245,6 +298,15 @@ export function CRMLayout() {
             <Settings className="w-4 h-4" />
             Admin
           </Button>
+          <Button
+            variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('supervision')}
+            className="flex-1 gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            Supervisão
+          </Button>
         </div>
         <div className="flex-1 overflow-hidden">
           <ConversationList
@@ -286,6 +348,13 @@ export function CRMLayout() {
         />
       ) : viewMode === 'admin' ? (
         <AdminPanel />
+      ) : viewMode === 'supervision' ? (
+        <SupervisionPanel
+          conversations={conversations}
+          tasks={tasks}
+          dismissedReports={dismissedReports}
+          onViewConversation={handleNavigateToTask}
+        />
       ) : (
         <MetricsDashboard />
       )}
@@ -296,6 +365,7 @@ export function CRMLayout() {
         conversation={selectedConversation}
         onClose={handleTaskModalClose}
         onSave={handleSaveTask}
+        onDismiss={handleDismissActivity}
       />
 
       {/* Task Reminders */}
