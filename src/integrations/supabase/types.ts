@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      whatsapp_conversations: {
+        Row: {
+          ai_enabled: boolean | null
+          assigned_to: string | null
+          category: string | null
+          chat_id: string
+          contact_avatar: string | null
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          id: string
+          last_seen: string | null
+          read_status: string | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          ai_enabled?: boolean | null
+          assigned_to?: string | null
+          category?: string | null
+          chat_id: string
+          contact_avatar?: string | null
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string
+          id?: string
+          last_seen?: string | null
+          read_status?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          ai_enabled?: boolean | null
+          assigned_to?: string | null
+          category?: string | null
+          chat_id?: string
+          contact_avatar?: string | null
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          last_seen?: string | null
+          read_status?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          id: string
+          message_id: string | null
+          message_type: string | null
+          metadata: Json | null
+          sender: string
+          status: string | null
+          timestamp: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          id?: string
+          message_id?: string | null
+          message_type?: string | null
+          metadata?: Json | null
+          sender: string
+          status?: string | null
+          timestamp?: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          id?: string
+          message_id?: string | null
+          message_type?: string | null
+          metadata?: Json | null
+          sender?: string
+          status?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
