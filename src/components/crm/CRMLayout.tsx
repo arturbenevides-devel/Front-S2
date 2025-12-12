@@ -102,7 +102,7 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 };
 
 export function CRMLayout() {
-  const { conversations: whatsappConversations, loading: conversationsLoading } = useWhatsAppMessages();
+  const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations } = useWhatsAppMessages();
   
   // Local state for conversation overrides (until DB update propagates)
   const [conversationOverrides, setConversationOverrides] = useState<Record<string, Partial<Conversation>>>({});
@@ -476,6 +476,11 @@ export function CRMLayout() {
               selectedId={selectedConversation?.id || null}
               onSelect={handleSelectConversation}
               onClaimConversation={handleClaimConversation}
+              onNewConversation={(id) => {
+                loadConversations();
+                const newConv = conversations.find(c => c.id === id);
+                if (newConv) handleSelectConversation(newConv);
+              }}
             />
           </div>
         </div>
@@ -634,6 +639,10 @@ export function CRMLayout() {
                   selectedId={selectedConversation?.id || null}
                   onSelect={handleSelectConversation}
                   onClaimConversation={handleClaimConversation}
+                  onNewConversation={(id) => {
+                    loadConversations();
+                    setMobilePanel('chat');
+                  }}
                 />
               )}
               {mobilePanel === 'chat' && (
