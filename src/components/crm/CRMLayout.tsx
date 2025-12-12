@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { AIPanel } from './AIPanel';
@@ -12,10 +12,11 @@ import { UnresponsedAlert } from './UnresponsedAlert';
 import { GamificationDashboard } from './gamification/GamificationDashboard';
 import { AgentProfile } from './gamification/AgentProfile';
 import { currentAgent } from '@/data/gamificationData';
-import { Conversation, Message, CustomerTask, DismissedActivityReport } from '@/types/crm';
-import { mockConversations, mockAISuggestions, mockPackages, sdrConversation } from '@/data/mockData';
+import { Conversation, Message, CustomerTask, DismissedActivityReport, ConversationReadStatus } from '@/types/crm';
+import { mockAISuggestions, mockPackages } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { useWhatsAppMessages, WhatsAppConversation } from '@/hooks/useWhatsAppMessages';
 import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -32,7 +33,7 @@ const initialTasks: CustomerTask[] = [
     contactName: 'Maria Silva',
     status: 'follow_up',
     nextStep: 'Enviar orçamento do pacote para Cancún',
-    scheduledDate: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
+    scheduledDate: new Date(Date.now() - 1000 * 60 * 5),
     createdAt: new Date(Date.now() - 1000 * 60 * 60),
     completed: false,
   },
@@ -42,7 +43,7 @@ const initialTasks: CustomerTask[] = [
     contactName: 'João Santos',
     status: 'em_orcamento',
     nextStep: 'Confirmar disponibilidade do resort',
-    scheduledDate: new Date(Date.now() - 1000 * 60 * 2), // 2 minutes ago
+    scheduledDate: new Date(Date.now() - 1000 * 60 * 2),
     createdAt: new Date(Date.now() - 1000 * 60 * 30),
     completed: false,
   },
@@ -70,10 +71,59 @@ const initialDismissedReports: DismissedActivityReport[] = [
   },
 ];
 
+// Map WhatsApp conversation from DB to CRM Conversation type
+const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
+  const readStatus: ConversationReadStatus = 
+    wa.read_status === 'pending' ? 'pending' : 
+    wa.read_status === 'unread' ? 'unread' : 'read';
+  
+  return {
+    id: wa.id,
+    contact: {
+      id: wa.id,
+      name: wa.contact_name || wa.contact_phone,
+      phone: wa.contact_phone,
+      avatar: wa.contact_avatar || undefined,
+      status: (wa.status as 'online' | 'offline' | 'away') || 'offline',
+      tags: wa.tags || [],
+    },
+    lastMessage: '',
+    lastMessageTime: wa.updated_at 
+      ? new Date(wa.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : '',
+    unreadCount: wa.read_status === 'unread' || wa.read_status === 'pending' ? 1 : 0,
+    messages: [],
+    category: (wa.category as 'lead' | 'booking' | 'support' | 'followup') || 'lead',
+    aiEnabled: wa.ai_enabled ?? true,
+    readStatus,
+    assignedTo: wa.assigned_to || undefined,
+  };
+};
+
 export function CRMLayout() {
-  const [conversations, setConversations] = useState<Conversation[]>(
-    [...mockConversations, sdrConversation].map(c => ({ ...c, aiEnabled: true }))
+  const { conversations: whatsappConversations, loading: conversationsLoading } = useWhatsAppMessages();
+  
+  // Local state for conversation overrides (until DB update propagates)
+  const [conversationOverrides, setConversationOverrides] = useState<Record<string, Partial<Conversation>>>({});
+  
+  // Map WhatsApp conversations to CRM format with local overrides
+  const conversations = useMemo(() => 
+    whatsappConversations.map(wa => {
+      const base = mapWhatsAppToConversation(wa);
+      const override = conversationOverrides[base.id];
+      return override ? { ...base, ...override } : base;
+    }),
+    [whatsappConversations, conversationOverrides]
   );
+  
+  // Helper to update a conversation locally
+  const updateConversationLocal = useCallback((conversationId: string, updates: Partial<Conversation>) => {
+    setConversationOverrides(prev => ({
+      ...prev,
+      [conversationId]: { ...prev[conversationId], ...updates },
+    }));
+  }, []);
+
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [tasks, setTasks] = useState<CustomerTask[]>(initialTasks);
@@ -125,16 +175,12 @@ export function CRMLayout() {
   }, []);
 
   const handleClaimConversation = useCallback((conversationId: string) => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === conversationId ? { ...c, readStatus: 'unread' as const, assignedTo: 'current-user' } : c
-      )
-    );
+    updateConversationLocal(conversationId, { readStatus: 'unread' as const, assignedTo: 'current-user' });
     toast({
       title: 'Atendimento assumido',
       description: 'Você assumiu este atendimento.',
     });
-  }, [toast]);
+  }, [toast, updateConversationLocal]);
 
   const handleSelectConversation = useCallback((conversation: Conversation) => {
     // If there's a selected conversation and user is switching, show task modal
@@ -145,15 +191,11 @@ export function CRMLayout() {
     }
 
     // Mark as read when selecting
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === conversation.id ? { ...c, unreadCount: 0, readStatus: 'read' as const } : c
-      )
-    );
+    updateConversationLocal(conversation.id, { unreadCount: 0, readStatus: 'read' as const });
     setSelectedConversation({ ...conversation, unreadCount: 0, readStatus: 'read' });
     setViewMode('chat');
     setMobilePanel('chat');
-  }, [selectedConversation]);
+  }, [selectedConversation, updateConversationLocal]);
 
   const handleSendMessage = (content: string) => {
     if (!selectedConversation) return;
@@ -176,9 +218,7 @@ export function CRMLayout() {
     };
 
     setSelectedConversation(updatedConversation);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === selectedConversation.id ? updatedConversation : c))
-    );
+    updateConversationLocal(selectedConversation.id, { lastMessage: content, lastMessageTime: newMessage.timestamp });
   };
 
   const handleUseSuggestion = (suggestion: { type: string; content: string; title: string }) => {
@@ -201,9 +241,7 @@ export function CRMLayout() {
 
     const updatedConversation = { ...selectedConversation, aiEnabled: enabled };
     setSelectedConversation(updatedConversation);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === selectedConversation.id ? updatedConversation : c))
-    );
+    updateConversationLocal(selectedConversation.id, { aiEnabled: enabled });
 
     toast({
       title: enabled ? 'IA Ativada' : 'IA Desativada',
@@ -212,13 +250,12 @@ export function CRMLayout() {
   };
 
   const handleUpdateTags = (conversationId: string, tags: string[]) => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === conversationId
-          ? { ...c, contact: { ...c.contact, tags } }
-          : c
-      )
-    );
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (conversation) {
+      updateConversationLocal(conversationId, { 
+        contact: { ...conversation.contact, tags } 
+      });
+    }
     
     if (selectedConversation?.id === conversationId) {
       setSelectedConversation((prev) =>
@@ -252,11 +289,7 @@ export function CRMLayout() {
 
     // Complete the conversation change
     if (pendingConversationChange) {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === pendingConversationChange.id ? { ...c, unreadCount: 0 } : c
-        )
-      );
+      updateConversationLocal(pendingConversationChange.id, { unreadCount: 0 });
       setSelectedConversation({ ...pendingConversationChange, unreadCount: 0 });
       setPendingConversationChange(null);
     }
@@ -304,9 +337,7 @@ export function CRMLayout() {
 
   // Handlers for unresponsed alert actions
   const handleEnableAIForConversation = (conversationId: string) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, aiEnabled: true } : c))
-    );
+    updateConversationLocal(conversationId, { aiEnabled: true });
     toast({
       title: 'IA Automática Ativada',
       description: 'A IA responderá automaticamente este cliente.',
@@ -348,11 +379,7 @@ export function CRMLayout() {
 
     // Complete the conversation change if pending
     if (pendingConversationChange) {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === pendingConversationChange.id ? { ...c, unreadCount: 0 } : c
-        )
-      );
+      updateConversationLocal(pendingConversationChange.id, { unreadCount: 0 });
       setSelectedConversation({ ...pendingConversationChange, unreadCount: 0 });
       setPendingConversationChange(null);
     }
