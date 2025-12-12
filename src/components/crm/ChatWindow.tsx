@@ -95,8 +95,12 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
   }, [displayMessages]);
 
   // Get chat_id from conversation (for Green API)
-  const getChatId = () => {
-    // Try to extract chat_id from conversation - might be stored in contact.phone
+  const getChatId = (): string | null => {
+    // Use chatId from conversation if available (from DB)
+    if (conversation?.chatId) {
+      return conversation.chatId;
+    }
+    // Fallback: construct from phone number
     const phone = conversation?.contact.phone?.replace(/\D/g, '');
     if (phone) {
       return `${phone}@c.us`;
