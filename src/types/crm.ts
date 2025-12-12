@@ -21,6 +21,7 @@ export interface Message {
 export type ConversationReadStatus = 'pending' | 'unread' | 'read';
 
 export interface Conversation {
+  chatId?: string; // WhatsApp chat_id for Green API
   id: string;
   contact: Contact;
   lastMessage: string;

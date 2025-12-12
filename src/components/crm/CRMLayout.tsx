@@ -79,6 +79,7 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
   
   return {
     id: wa.id,
+    chatId: wa.chat_id, // WhatsApp chat_id for Green API
     contact: {
       id: wa.id,
       name: wa.contact_name || wa.contact_phone,
