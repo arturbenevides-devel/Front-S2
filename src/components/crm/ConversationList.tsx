@@ -11,12 +11,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { NewConversationModal } from './NewConversationModal';
 
 interface ConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
   onSelect: (conversation: Conversation) => void;
   onClaimConversation?: (conversationId: string) => void;
+  onNewConversation?: (conversationId: string) => void;
 }
 
 const categoryColors = {
@@ -51,11 +53,12 @@ const getAllTags = (conversations: Conversation[]): string[] => {
   return Array.from(tagsSet).sort();
 };
 
-export function ConversationList({ conversations, selectedId, onSelect, onClaimConversation }: ConversationListProps) {
+export function ConversationList({ conversations, selectedId, onSelect, onClaimConversation, onNewConversation }: ConversationListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
 
   const allTags = getAllTags(conversations);
 
@@ -110,10 +113,22 @@ export function ConversationList({ conversations, selectedId, onSelect, onClaimC
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border p-3 sm:p-4">
         <h2 className="text-base sm:text-lg font-semibold text-foreground">Conversas</h2>
-        <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
+        <Button 
+          size="icon" 
+          variant="ghost" 
+          className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10"
+          onClick={() => setIsNewConversationOpen(true)}
+        >
           <MessageSquarePlus className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
       </div>
+
+      {/* New Conversation Modal */}
+      <NewConversationModal
+        open={isNewConversationOpen}
+        onOpenChange={setIsNewConversationOpen}
+        onConversationCreated={onNewConversation}
+      />
 
       {/* Status Filter Tabs */}
       <div className="flex gap-1 px-2 py-1.5 border-b border-border overflow-x-auto scrollbar-none">
