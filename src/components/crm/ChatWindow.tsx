@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Conversation, Message } from '@/types/crm';
 import { CompleteSaleModal } from './CompleteSaleModal';
 import { CompleteServiceModal } from './CompleteServiceModal';
+import { useWhatsAppMessages, WhatsAppMessage } from '@/hooks/useWhatsAppMessages';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -18,6 +19,17 @@ interface ChatWindowProps {
     birthDate?: string;
   } | null;
 }
+
+// Map WhatsApp message to CRM Message format
+const mapWhatsAppMessage = (msg: WhatsAppMessage): Message => ({
+  id: msg.id,
+  conversationId: msg.conversation_id,
+  content: msg.content,
+  timestamp: new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  sender: msg.sender === 'agent' ? 'user' : 'contact',
+  status: msg.status === 'read' ? 'read' : msg.status === 'delivered' ? 'delivered' : 'sent',
+  type: msg.message_type as 'text' | 'image' | 'document' | 'audio',
+});
 
 function MessageBubble({ message }: { message: Message }) {
   const isUser = message.sender === 'user';
@@ -60,9 +72,51 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
   const [message, setMessage] = useState('');
   const [showCompleteSale, setShowCompleteSale] = useState(false);
   const [showCompleteService, setShowCompleteService] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (message.trim()) {
+  // Use WhatsApp hook for real messages
+  const { 
+    messages: whatsappMessages, 
+    loading, 
+    sending, 
+    sendMessage: sendWhatsAppMessage,
+    loadMessages 
+  } = useWhatsAppMessages(conversation?.id);
+
+  // Map WhatsApp messages to CRM format
+  const realMessages: Message[] = whatsappMessages.map(mapWhatsAppMessage);
+  
+  // Use real messages if available, otherwise fall back to conversation.messages
+  const displayMessages = realMessages.length > 0 ? realMessages : conversation?.messages || [];
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [displayMessages]);
+
+  // Get chat_id from conversation (for Green API)
+  const getChatId = () => {
+    // Try to extract chat_id from conversation - might be stored in contact.phone
+    const phone = conversation?.contact.phone?.replace(/\D/g, '');
+    if (phone) {
+      return `${phone}@c.us`;
+    }
+    return null;
+  };
+
+  const handleSend = async () => {
+    if (!message.trim() || !conversation) return;
+
+    const chatId = getChatId();
+    
+    if (chatId) {
+      // Send via Edge Function (real WhatsApp)
+      const result = await sendWhatsAppMessage(chatId, message, conversation.id);
+      if (result.success) {
+        setMessage('');
+      }
+    } else {
+      // Fallback to mock send
       onSendMessage(message);
       setMessage('');
     }
@@ -171,11 +225,18 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
-        <div className="flex flex-col gap-3">
-          {conversation.messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {displayMessages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
       {/* Input */}
@@ -195,8 +256,17 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
             className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
           />
           {message.trim() ? (
-            <Button size="icon" onClick={handleSend} className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10">
-              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Button 
+              size="icon" 
+              onClick={handleSend} 
+              disabled={sending}
+              className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10"
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+              )}
             </Button>
           ) : (
             <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
