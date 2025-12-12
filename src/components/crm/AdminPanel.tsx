@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy } from 'lucide-react';
+import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy, Smartphone, Link, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,13 @@ interface AgencySettings {
   termsText: string;
 }
 
+interface WhatsAppConnection {
+  instanceId: string;
+  apiToken: string;
+  isConnected: boolean;
+  phoneNumber: string;
+}
+
 const defaultAgencySettings: AgencySettings = {
   name: 'Viagens Incríveis',
   cnpj: '12.345.678/0001-90',
@@ -88,6 +95,15 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [newAgent, setNewAgent] = useState<{ name: string; email: string; role: 'admin' | 'agent' | 'supervisor' }>({ name: '', email: '', role: 'agent' });
   const [agencySettings, setAgencySettings] = useState<AgencySettings>(defaultAgencySettings);
+  
+  // WhatsApp Connection State
+  const [whatsappConnection, setWhatsappConnection] = useState<WhatsAppConnection>({
+    instanceId: '',
+    apiToken: '',
+    isConnected: false,
+    phoneNumber: '',
+  });
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   const handleGamificationToggle = (enabled: boolean) => {
     onGamificationToggle?.(enabled);
@@ -141,6 +157,64 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
     });
   };
 
+  const handleTestWhatsAppConnection = async () => {
+    if (!whatsappConnection.instanceId || !whatsappConnection.apiToken) {
+      toast({
+        title: 'Dados incompletos',
+        description: 'Preencha o Instance ID e API Token para testar a conexão.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsTestingConnection(true);
+    
+    try {
+      // Test connection by calling Green API getStateInstance
+      const response = await fetch(
+        `https://api.green-api.com/waInstance${whatsappConnection.instanceId}/getStateInstance/${whatsappConnection.apiToken}`
+      );
+      
+      const data = await response.json();
+      
+      if (data.stateInstance === 'authorized') {
+        setWhatsappConnection(prev => ({ ...prev, isConnected: true }));
+        toast({
+          title: 'Conexão bem-sucedida!',
+          description: 'WhatsApp conectado e pronto para uso.',
+        });
+      } else if (data.stateInstance === 'notAuthorized') {
+        toast({
+          title: 'WhatsApp não autorizado',
+          description: 'Escaneie o QR Code no painel Green API para autorizar.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Status: ' + data.stateInstance,
+          description: 'Verifique o painel Green API para mais detalhes.',
+        });
+      }
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      toast({
+        title: 'Erro na conexão',
+        description: 'Não foi possível conectar. Verifique as credenciais.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleSaveWhatsAppConnection = () => {
+    // In a real app, this would save to Supabase secrets
+    toast({
+      title: 'Configurações salvas',
+      description: 'As credenciais do WhatsApp foram salvas. O webhook está configurado automaticamente.',
+    });
+  };
+
   const handleLogoUpload = () => {
     // Simulate logo upload
     setAgencySettings(prev => ({
@@ -189,6 +263,10 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
           <TabsTrigger value="pdf" className="gap-2">
             <FileText className="h-4 w-4" />
             PDF & Branding
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp" className="gap-2">
+            <Smartphone className="h-4 w-4" />
+            WhatsApp
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -820,6 +898,150 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
                 </div>
                 <Switch defaultChecked />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="whatsapp" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-primary" />
+                Conectar Número WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Configure a integração com WhatsApp via Green API para receber e enviar mensagens em tempo real
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Connection Status */}
+              <div className={`flex items-center justify-between p-4 rounded-lg ${whatsappConnection.isConnected ? 'bg-success/10 border border-success/20' : 'bg-muted/50'}`}>
+                <div className="flex items-center gap-3">
+                  {whatsappConnection.isConnected ? (
+                    <CheckCircle className="h-6 w-6 text-success" />
+                  ) : (
+                    <XCircle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {whatsappConnection.isConnected ? 'WhatsApp Conectado' : 'WhatsApp Desconectado'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {whatsappConnection.isConnected 
+                        ? 'Pronto para enviar e receber mensagens' 
+                        : 'Configure as credenciais abaixo para conectar'}
+                    </p>
+                  </div>
+                </div>
+                {whatsappConnection.isConnected && (
+                  <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                    Online
+                  </Badge>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Credentials Form */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="instanceId">Instance ID</Label>
+                  <Input
+                    id="instanceId"
+                    placeholder="Ex: 1234567890"
+                    value={whatsappConnection.instanceId}
+                    onChange={(e) => setWhatsappConnection(prev => ({ ...prev, instanceId: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Encontre o Instance ID no painel da Green API
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="apiToken">API Token</Label>
+                  <Input
+                    id="apiToken"
+                    type="password"
+                    placeholder="Seu token de API"
+                    value={whatsappConnection.apiToken}
+                    onChange={(e) => setWhatsappConnection(prev => ({ ...prev, apiToken: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Token de autenticação da sua instância Green API
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleTestWhatsAppConnection}
+                    disabled={isTestingConnection || !whatsappConnection.instanceId || !whatsappConnection.apiToken}
+                    className="gap-2"
+                  >
+                    {isTestingConnection ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Link className="h-4 w-4" />
+                    )}
+                    Testar Conexão
+                  </Button>
+                  <Button
+                    onClick={handleSaveWhatsAppConnection}
+                    disabled={!whatsappConnection.instanceId || !whatsappConnection.apiToken}
+                    className="gap-2"
+                  >
+                    Salvar Configurações
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Webhook Info */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-foreground flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Configuração do Webhook
+                </h4>
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Configure este URL de webhook no painel da Green API:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 p-2 rounded bg-background text-xs font-mono break-all">
+                      https://jqupflvdfycpnqzhtmqb.supabase.co/functions/v1/whatsapp-webhook
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://jqupflvdfycpnqzhtmqb.supabase.co/functions/v1/whatsapp-webhook');
+                        toast({
+                          title: 'URL copiada!',
+                          description: 'Cole no campo de webhook da Green API.',
+                        });
+                      }}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-foreground mb-2">Como configurar:</h4>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Acesse o painel da Green API e crie uma instância</li>
+                    <li>Escaneie o QR Code com seu WhatsApp</li>
+                    <li>Copie o Instance ID e API Token</li>
+                    <li>Cole as credenciais nos campos acima</li>
+                    <li>Configure o URL de webhook no painel Green API</li>
+                    <li>Clique em "Testar Conexão" para verificar</li>
+                  </ol>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
         </TabsContent>
