@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,14 +13,38 @@ interface ConversationContext {
   recentMessages?: { sender: string; content: string }[];
 }
 
+interface AISettings {
+  systemPrompt?: string;
+  autopilotPrompt?: string;
+  suggestionPrompt?: string;
+  analysisPrompt?: string;
+  knowledgeBase?: string[];
+  companyInfo?: string;
+  productsInfo?: string;
+  faqInfo?: string;
+}
+
 export function useAIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
+  const [aiSettings, setAISettings] = useState<AISettings | null>(null);
   const { toast } = useToast();
+
+  // Load AI settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('ai_settings');
+    if (savedSettings) {
+      try {
+        setAISettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error('Failed to parse AI settings:', e);
+      }
+    }
+  }, []);
 
   const sendMessage = useCallback(async (
     messages: AIMessage[],
     conversationContext?: ConversationContext,
-    type: 'chat' | 'suggest' | 'analyze' = 'chat'
+    type: 'chat' | 'suggest' | 'analyze' | 'autopilot' = 'chat'
   ): Promise<string | null> => {
     setIsLoading(true);
 
@@ -30,6 +54,7 @@ export function useAIAssistant() {
           messages,
           conversationContext,
           type,
+          aiSettings, // Pass custom AI settings
         },
       });
 
@@ -64,7 +89,7 @@ export function useAIAssistant() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, aiSettings]);
 
   const generateSuggestions = useCallback(async (
     conversationContext: ConversationContext
@@ -86,10 +111,23 @@ export function useAIAssistant() {
     );
   }, [sendMessage]);
 
+  const refreshSettings = useCallback(() => {
+    const savedSettings = localStorage.getItem('ai_settings');
+    if (savedSettings) {
+      try {
+        setAISettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error('Failed to parse AI settings:', e);
+      }
+    }
+  }, []);
+
   return {
     sendMessage,
     generateSuggestions,
     analyzeConversation,
     isLoading,
+    aiSettings,
+    refreshSettings,
   };
 }
