@@ -49,7 +49,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   const [inputMessage, setInputMessage] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { sendMessage: sendAIMessage, isLoading: isAILoading } = useAIAssistant();
+  const { sendMessage: sendAIMessage, generateSuggestions, analyzeConversation, isLoading: isAILoading } = useAIAssistant();
 
   // Modal states
   const [showQuoteSearch, setShowQuoteSearch] = useState(false);
@@ -64,6 +64,12 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
     cpf?: string;
     birthDate?: string;
   } | null>(null);
+  
+  // AI-generated content
+  const [aiSuggestions, setAiSuggestions] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const [isAnalyzingConversation, setIsAnalyzingConversation] = useState(false);
 
   // Detect images in conversation messages
   const detectedImages = useMemo(() => {
@@ -78,7 +84,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   }, [conversation]);
 
   // Mock AI analysis for pre-filling search
-  const aiAnalysis = conversation ? {
+  const quoteAnalysis = conversation ? {
     destination: conversation.lastMessage.includes('Cancún') ? 'Cancún' : 
                  conversation.lastMessage.includes('Paris') ? 'Paris' : 'Rio de Janeiro',
     checkIn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -87,16 +93,38 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
     children: 0,
   } : undefined;
 
+  // Get conversation context for AI
+  const getConversationContext = () => {
+    if (!conversation) return undefined;
+    return {
+      contactName: conversation.contact.name,
+      category: conversation.category,
+      recentMessages: conversation.messages.slice(-15).map(m => ({
+        sender: m.sender,
+        content: m.content,
+      })),
+    };
+  };
+
+  // Auto-generate suggestions when AI is enabled and conversation changes
+  useEffect(() => {
+    if (aiEnabled && conversation && !aiSuggestions && !isGeneratingSuggestions) {
+      handleGenerateSuggestions();
+    }
+  }, [conversation?.id, aiEnabled]);
+
+  // Reset AI content when conversation changes
+  useEffect(() => {
+    setChatMessages([]);
+    setAiSuggestions(null);
+    setAiAnalysis(null);
+  }, [conversation?.id]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatMessages]);
-
-  useEffect(() => {
-    // Reset chat when conversation changes
-    setChatMessages([]);
-  }, [conversation?.id]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -106,9 +134,34 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
     });
   };
 
-  const handleRefresh = () => {
+  // Generate AI suggestions
+  const handleGenerateSuggestions = async () => {
+    const context = getConversationContext();
+    if (!context) return;
+    
+    setIsGeneratingSuggestions(true);
+    const result = await generateSuggestions(context);
+    setAiSuggestions(result);
+    setIsGeneratingSuggestions(false);
+  };
+
+  // Analyze conversation with AI
+  const handleAnalyzeConversation = async () => {
+    const context = getConversationContext();
+    if (!context) return;
+    
+    setIsAnalyzingConversation(true);
+    const result = await analyzeConversation(context);
+    setAiAnalysis(result);
+    setIsAnalyzingConversation(false);
+  };
+
+  const handleRefresh = async () => {
     setIsAnalyzing(true);
-    setTimeout(() => setIsAnalyzing(false), 1500);
+    setAiSuggestions(null);
+    setAiAnalysis(null);
+    await handleGenerateSuggestions();
+    setIsAnalyzing(false);
   };
 
   const handleSendAIMessage = async () => {
@@ -281,14 +334,32 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
         <TabsContent value="suggestions" className="overflow-auto mt-0 px-3 pb-3 pt-2">
           {/* AI Status */}
           <div className="mb-3 rounded-lg bg-gradient-to-r from-ai-start/10 to-ai-end/10 p-2">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  'h-2 w-2 rounded-full',
-                  aiEnabled ? 'bg-success animate-pulse-soft' : 'bg-muted-foreground'
-                )} />
-                <span className="text-xs font-medium text-foreground">
-                  {isAnalyzing ? 'Analisando...' : aiEnabled ? 'Análise concluída' : 'IA desativada'}
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    'h-2 w-2 rounded-full',
+                    aiEnabled ? 'bg-success animate-pulse-soft' : 'bg-muted-foreground'
+                  )} />
+                  <span className="text-xs font-medium text-foreground">
+                    {isAnalyzing || isGeneratingSuggestions ? 'Analisando...' : aiEnabled ? 'IA Ativa' : 'IA desativada'}
+                  </span>
+                </div>
+                {aiEnabled && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-xs gap-1"
+                    onClick={handleAnalyzeConversation}
+                    disabled={isAnalyzingConversation}
+                  >
+                    {isAnalyzingConversation ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3" />
+                    )}
+                    Analisar
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -330,72 +401,142 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                   </Card>
                 )}
 
-                {/* Suggestions */}
+                {/* AI Analysis Result */}
+                {aiAnalysis && (
+                  <Card className="mb-3 border-primary/30 bg-primary/5 animate-fade-in">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <h4 className="text-xs font-semibold text-foreground">Análise da Conversa</h4>
+                      </div>
+                      <p className="text-xs text-foreground whitespace-pre-wrap">{aiAnalysis}</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs mt-2"
+                        onClick={() => handleCopy(aiAnalysis)}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copiar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* AI Suggestions */}
                 <div className="mb-3">
-                  <h4 className="mb-2 text-xs font-semibold text-foreground">Sugestões</h4>
-                  <div className="flex flex-col gap-1.5">
-                    {suggestions.map((suggestion) => {
-                      const Icon = suggestionIcons[suggestion.type];
-                      return (
-                        <Card
-                          key={suggestion.id}
-                          className={cn(
-                            'cursor-pointer border transition-all',
-                            suggestionColors[suggestion.type]
-                          )}
-                          onClick={() => onUseSuggestion(suggestion)}
-                        >
-                          <CardContent className="p-2">
-                            <div className="flex items-start gap-2">
-                              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-background">
-                                <Icon className="h-3 w-3 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-xs font-medium text-foreground line-clamp-1">
-                                    {suggestion.title}
-                                  </span>
-                                  <Badge variant="secondary" className="text-[10px] shrink-0 px-1 py-0">
-                                    {suggestion.confidence}%
-                                  </Badge>
-                                </div>
-                                <p className="text-[11px] text-muted-foreground line-clamp-1">
-                                  {suggestion.content}
-                                </p>
-                              </div>
-                            </div>
-                            {suggestion.type === 'response' && (
-                              <div className="mt-1.5 flex gap-1.5">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-6 flex-1 text-[10px]"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopy(suggestion.content);
-                                  }}
-                                >
-                                  <Copy className="mr-1 h-2.5 w-2.5" />
-                                  Copiar
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="h-6 flex-1 text-[10px] bg-primary hover:bg-primary/90"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onUseSuggestion(suggestion);
-                                  }}
-                                >
-                                  <Send className="mr-1 h-2.5 w-2.5" />
-                                  Usar
-                                </Button>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-semibold text-foreground">Sugestões IA</h4>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs gap-1"
+                      onClick={handleGenerateSuggestions}
+                      disabled={isGeneratingSuggestions}
+                    >
+                      {isGeneratingSuggestions ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Gerar
+                    </Button>
                   </div>
+                  
+                  {isGeneratingSuggestions && (
+                    <Card className="border-muted">
+                      <CardContent className="p-3 flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-xs text-muted-foreground">Gerando sugestões...</span>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {aiSuggestions && !isGeneratingSuggestions && (
+                    <Card className="border-success/30 bg-success/5 animate-fade-in">
+                      <CardContent className="p-3">
+                        <p className="text-xs text-foreground whitespace-pre-wrap">{aiSuggestions}</p>
+                        <div className="mt-2 flex gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-6 text-[10px]"
+                            onClick={() => handleCopy(aiSuggestions)}
+                          >
+                            <Copy className="mr-1 h-2.5 w-2.5" />
+                            Copiar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Static Suggestions Fallback */}
+                  {!aiSuggestions && !isGeneratingSuggestions && suggestions.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      {suggestions.map((suggestion) => {
+                        const Icon = suggestionIcons[suggestion.type];
+                        return (
+                          <Card
+                            key={suggestion.id}
+                            className={cn(
+                              'cursor-pointer border transition-all',
+                              suggestionColors[suggestion.type]
+                            )}
+                            onClick={() => onUseSuggestion(suggestion)}
+                          >
+                            <CardContent className="p-2">
+                              <div className="flex items-start gap-2">
+                                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-background">
+                                  <Icon className="h-3 w-3 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-xs font-medium text-foreground line-clamp-1">
+                                      {suggestion.title}
+                                    </span>
+                                    <Badge variant="secondary" className="text-[10px] shrink-0 px-1 py-0">
+                                      {suggestion.confidence}%
+                                    </Badge>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-1">
+                                    {suggestion.content}
+                                  </p>
+                                </div>
+                              </div>
+                              {suggestion.type === 'response' && (
+                                <div className="mt-1.5 flex gap-1.5">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-6 flex-1 text-[10px]"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopy(suggestion.content);
+                                    }}
+                                  >
+                                    <Copy className="mr-1 h-2.5 w-2.5" />
+                                    Copiar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="h-6 flex-1 text-[10px] bg-primary hover:bg-primary/90"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onUseSuggestion(suggestion);
+                                    }}
+                                  >
+                                    <Send className="mr-1 h-2.5 w-2.5" />
+                                    Usar
+                                  </Button>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Actions */}
@@ -554,7 +695,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
       <QuoteSearchModal
         open={showQuoteSearch}
         onClose={() => setShowQuoteSearch(false)}
-        aiAnalysis={aiAnalysis}
+        aiAnalysis={quoteAnalysis}
         onGenerateQuote={handleGenerateQuoteFromSearch}
       />
 
