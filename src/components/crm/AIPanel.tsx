@@ -28,6 +28,8 @@ interface AIPanelProps {
   onToggleAI: (enabled: boolean) => void;
   onUpdateTags?: (conversationId: string, tags: string[]) => void;
   onDocumentDataCaptured?: (data: { name?: string; cpf?: string; birthDate?: string }) => void;
+  autopilotEnabled?: boolean;
+  onAutopilotToggle?: (enabled: boolean) => void;
 }
 
 const suggestionIcons = {
@@ -42,7 +44,18 @@ const suggestionColors = {
   info: 'border-info/20 bg-info/5 hover:bg-info/10',
 };
 
-export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, aiEnabled, onToggleAI, onUpdateTags, onDocumentDataCaptured }: AIPanelProps) {
+export function AIPanel({ 
+  conversation, 
+  suggestions, 
+  packages, 
+  onUseSuggestion, 
+  aiEnabled, 
+  onToggleAI, 
+  onUpdateTags, 
+  onDocumentDataCaptured,
+  autopilotEnabled = false,
+  onAutopilotToggle,
+}: AIPanelProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'suggestions' | 'chat'>('suggestions');
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([]);
@@ -58,7 +71,6 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
   const [showPDFExport, setShowPDFExport] = useState(false);
   const [showImageReader, setShowImageReader] = useState(false);
   const [quoteGeneratorData, setQuoteGeneratorData] = useState<{ type: string; title: string; details: string; price?: number } | undefined>();
-  const [autopilotEnabled, setAutopilotEnabled] = useState(false);
   const [capturedDocumentData, setCapturedDocumentData] = useState<{
     name?: string;
     cpf?: string;
@@ -295,12 +307,17 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
               id="autopilot-toggle"
               checked={autopilotEnabled}
               onCheckedChange={(checked) => {
-                setAutopilotEnabled(checked);
+                onAutopilotToggle?.(checked);
                 if (checked) {
                   onToggleAI(true);
                   toast({
                     title: "Piloto Automático Ativado",
                     description: "A IA responderá automaticamente aos clientes.",
+                  });
+                } else {
+                  toast({
+                    title: "Piloto Automático Desativado",
+                    description: "A IA não responderá mais automaticamente.",
                   });
                 }
               }}
