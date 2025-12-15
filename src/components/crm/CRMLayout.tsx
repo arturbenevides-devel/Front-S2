@@ -102,19 +102,20 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 };
 
 export function CRMLayout() {
-  const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations } = useWhatsAppMessages();
+  const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
   
   // Local state for conversation overrides (until DB update propagates)
   const [conversationOverrides, setConversationOverrides] = useState<Record<string, Partial<Conversation>>>({});
   
-  // Map WhatsApp conversations to CRM format with local overrides
+  // Map WhatsApp conversations to CRM format with local overrides and unread counts
   const conversations = useMemo(() => 
     whatsappConversations.map(wa => {
       const base = mapWhatsAppToConversation(wa);
       const override = conversationOverrides[base.id];
-      return override ? { ...base, ...override } : base;
+      const unreadCount = unreadCounts[base.id] || (wa.read_status === 'unread' || wa.read_status === 'pending' ? 1 : 0);
+      return override ? { ...base, ...override, unreadCount } : { ...base, unreadCount };
     }),
-    [whatsappConversations, conversationOverrides]
+    [whatsappConversations, conversationOverrides, unreadCounts]
   );
   
   // Helper to update a conversation locally
@@ -192,11 +193,12 @@ export function CRMLayout() {
     }
 
     // Mark as read when selecting
+    markAsRead(conversation.id);
     updateConversationLocal(conversation.id, { unreadCount: 0, readStatus: 'read' as const });
     setSelectedConversation({ ...conversation, unreadCount: 0, readStatus: 'read' });
     setViewMode('chat');
     setMobilePanel('chat');
-  }, [selectedConversation, updateConversationLocal]);
+  }, [selectedConversation, updateConversationLocal, markAsRead]);
 
   const handleSendMessage = (content: string) => {
     if (!selectedConversation) return;
