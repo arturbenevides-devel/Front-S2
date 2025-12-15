@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy, Smartphone, Link, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy, Smartphone, Link, CheckCircle, XCircle, Loader2, Brain, BookOpen, Plus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,17 @@ interface WhatsAppConnection {
   phoneNumber: string;
 }
 
+interface AISettings {
+  systemPrompt: string;
+  autopilotPrompt: string;
+  suggestionPrompt: string;
+  analysisPrompt: string;
+  knowledgeBase: string[];
+  companyInfo: string;
+  productsInfo: string;
+  faqInfo: string;
+}
+
 const defaultAgencySettings: AgencySettings = {
   name: 'Viagens Incríveis',
   cnpj: '12.345.678/0001-90',
@@ -104,6 +115,39 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
     phoneNumber: '',
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+
+  // AI Settings State
+  const [aiSettings, setAISettings] = useState<AISettings>({
+    systemPrompt: `Você é um assistente de IA especializado em vendas de viagens para uma agência de turismo.
+Seu objetivo é ajudar os atendentes a:
+- Responder dúvidas sobre destinos, preços e disponibilidade
+- Sugerir respostas para clientes
+- Analisar perfil de clientes e recomendar pacotes
+- Fornecer informações de mercado e tendências
+
+Seja conciso, profissional e sempre ofereça sugestões práticas.
+Responda sempre em português brasileiro.`,
+    autopilotPrompt: `Você está no modo PILOTO AUTOMÁTICO. Responda diretamente ao cliente como se fosse o atendente.
+REGRAS IMPORTANTES:
+- Responda de forma amigável, profissional e natural
+- Use linguagem adequada para WhatsApp (informal mas respeitosa)
+- Seja proativo, ofereça ajuda e faça perguntas para qualificar o lead
+- Se o cliente perguntar sobre pacotes ou preços, diga que vai verificar e retornar em breve
+- NUNCA diga que é uma IA ou assistente virtual
+- Limite sua resposta a 2-3 parágrafos curtos no máximo
+- Use emojis moderadamente para parecer natural 🌴✈️`,
+    suggestionPrompt: `Analise a conversa e sugira 2-3 respostas prontas que o atendente pode enviar ao cliente.
+Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
+    analysisPrompt: `Analise o perfil do cliente baseado nas mensagens e forneça:
+1. Interesse principal (destino, tipo de viagem)
+2. Urgência (baixa, média, alta)
+3. Recomendação de próximo passo`,
+    knowledgeBase: [],
+    companyInfo: '',
+    productsInfo: '',
+    faqInfo: '',
+  });
+  const [newKnowledgeItem, setNewKnowledgeItem] = useState('');
 
   const handleGamificationToggle = (enabled: boolean) => {
     onGamificationToggle?.(enabled);
@@ -215,6 +259,36 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
     });
   };
 
+  const handleSaveAISettings = () => {
+    // Save to localStorage for now (could be Supabase in production)
+    localStorage.setItem('ai_settings', JSON.stringify(aiSettings));
+    toast({
+      title: 'Configurações de IA salvas',
+      description: 'Os prompts e base de conhecimento foram atualizados.',
+    });
+  };
+
+  const handleAddKnowledgeItem = () => {
+    if (newKnowledgeItem.trim()) {
+      setAISettings(prev => ({
+        ...prev,
+        knowledgeBase: [...prev.knowledgeBase, newKnowledgeItem.trim()]
+      }));
+      setNewKnowledgeItem('');
+      toast({
+        title: 'Item adicionado',
+        description: 'Novo item adicionado à base de conhecimento.',
+      });
+    }
+  };
+
+  const handleRemoveKnowledgeItem = (index: number) => {
+    setAISettings(prev => ({
+      ...prev,
+      knowledgeBase: prev.knowledgeBase.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleLogoUpload = () => {
     // Simulate logo upload
     setAgencySettings(prev => ({
@@ -259,6 +333,10 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
           <TabsTrigger value="sdr" className="gap-2">
             <Bot className="h-4 w-4" />
             IA SDR
+          </TabsTrigger>
+          <TabsTrigger value="ai-config" className="gap-2">
+            <Brain className="h-4 w-4" />
+            IA Config
           </TabsTrigger>
           <TabsTrigger value="pdf" className="gap-2">
             <FileText className="h-4 w-4" />
@@ -900,6 +978,185 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* AI Configuration Tab */}
+        <TabsContent value="ai-config" className="space-y-4">
+          <ScrollArea className="h-[calc(100vh-280px)]">
+            <div className="space-y-4 pr-4">
+              {/* System Prompt */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    Prompt Principal
+                  </CardTitle>
+                  <CardDescription>
+                    Configure o comportamento base da IA em todos os atendimentos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Prompt do Sistema</Label>
+                    <Textarea
+                      value={aiSettings.systemPrompt}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, systemPrompt: e.target.value }))}
+                      placeholder="Descreva como a IA deve se comportar..."
+                      className="min-h-[150px] font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Este é o prompt base que define a personalidade e capacidades da IA
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Autopilot Prompt */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-primary" />
+                    Prompt do Piloto Automático
+                  </CardTitle>
+                  <CardDescription>
+                    Configure como a IA responde automaticamente aos clientes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Instruções do Autopilot</Label>
+                    <Textarea
+                      value={aiSettings.autopilotPrompt}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, autopilotPrompt: e.target.value }))}
+                      placeholder="Instruções para respostas automáticas..."
+                      className="min-h-[150px] font-mono text-sm"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Suggestion & Analysis Prompts */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                    Prompts de Sugestão e Análise
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Prompt de Sugestões</Label>
+                    <Textarea
+                      value={aiSettings.suggestionPrompt}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, suggestionPrompt: e.target.value }))}
+                      placeholder="Instruções para gerar sugestões..."
+                      className="min-h-[80px] font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Prompt de Análise</Label>
+                    <Textarea
+                      value={aiSettings.analysisPrompt}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, analysisPrompt: e.target.value }))}
+                      placeholder="Instruções para analisar conversas..."
+                      className="min-h-[80px] font-mono text-sm"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Knowledge Base */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    Base de Conhecimento
+                  </CardTitle>
+                  <CardDescription>
+                    Adicione informações que a IA deve usar nos atendimentos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Company Info */}
+                  <div className="space-y-2">
+                    <Label>Informações da Empresa</Label>
+                    <Textarea
+                      value={aiSettings.companyInfo}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, companyInfo: e.target.value }))}
+                      placeholder="Descreva sua agência, história, diferenciais, políticas..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  {/* Products Info */}
+                  <div className="space-y-2">
+                    <Label>Produtos e Serviços</Label>
+                    <Textarea
+                      value={aiSettings.productsInfo}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, productsInfo: e.target.value }))}
+                      placeholder="Liste seus principais pacotes, destinos, promoções..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  {/* FAQ Info */}
+                  <div className="space-y-2">
+                    <Label>Perguntas Frequentes (FAQ)</Label>
+                    <Textarea
+                      value={aiSettings.faqInfo}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, faqInfo: e.target.value }))}
+                      placeholder="Liste perguntas e respostas comuns dos clientes..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Additional Knowledge Items */}
+                  <div className="space-y-3">
+                    <Label>Itens Adicionais de Conhecimento</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newKnowledgeItem}
+                        onChange={(e) => setNewKnowledgeItem(e.target.value)}
+                        placeholder="Ex: Aceitamos PIX com 5% de desconto"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddKnowledgeItem()}
+                      />
+                      <Button onClick={handleAddKnowledgeItem} size="icon">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {aiSettings.knowledgeBase.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        {aiSettings.knowledgeBase.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <span className="flex-1 text-sm">{item}</span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleRemoveKnowledgeItem(index)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <Button onClick={handleSaveAISettings} className="gap-2">
+                  <Save className="h-4 w-4" />
+                  Salvar Configurações de IA
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="whatsapp" className="space-y-4">
