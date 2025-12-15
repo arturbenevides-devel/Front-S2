@@ -17,6 +17,7 @@ import { mockAISuggestions, mockPackages } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useWhatsAppMessages, WhatsAppConversation } from '@/hooks/useWhatsAppMessages';
+import { useAutopilot } from '@/hooks/useAutopilot';
 import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -103,7 +104,7 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 
 export function CRMLayout() {
   const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
-  
+  const { enableAutopilot, disableAutopilot, isAutopilotActive } = useAutopilot();
   // Local state for conversation overrides (until DB update propagates)
   const [conversationOverrides, setConversationOverrides] = useState<Record<string, Partial<Conversation>>>({});
   
@@ -510,6 +511,16 @@ export function CRMLayout() {
                 onToggleAI={handleToggleAI}
                 onUpdateTags={handleUpdateTags}
                 onDocumentDataCaptured={setCapturedDocumentData}
+                autopilotEnabled={selectedConversation ? isAutopilotActive(selectedConversation.id) : false}
+                onAutopilotToggle={(enabled) => {
+                  if (selectedConversation) {
+                    if (enabled) {
+                      enableAutopilot(selectedConversation.id);
+                    } else {
+                      disableAutopilot(selectedConversation.id);
+                    }
+                  }
+                }}
               />
             </div>
           </>
@@ -664,6 +675,16 @@ export function CRMLayout() {
                   onToggleAI={handleToggleAI}
                   onUpdateTags={handleUpdateTags}
                   onDocumentDataCaptured={setCapturedDocumentData}
+                  autopilotEnabled={selectedConversation ? isAutopilotActive(selectedConversation.id) : false}
+                  onAutopilotToggle={(enabled) => {
+                    if (selectedConversation) {
+                      if (enabled) {
+                        enableAutopilot(selectedConversation.id);
+                      } else {
+                        disableAutopilot(selectedConversation.id);
+                      }
+                    }
+                  }}
                 />
               )}
             </>
