@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map, Zap, FileDown, ScanText, Image } from 'lucide-react';
+import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map, Zap, FileDown, ScanText, Image, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { AISuggestion, Conversation, TravelPackage, AIChatMessage } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
+import { useAIAssistant } from '@/hooks/useAIAssistant';
 import { QuoteSearchModal } from './QuoteSearchModal';
 import { QuoteGeneratorModal } from './QuoteGeneratorModal';
 import { ItineraryCreatorModal } from './ItineraryCreatorModal';
@@ -41,22 +42,14 @@ const suggestionColors = {
   info: 'border-info/20 bg-info/5 hover:bg-info/10',
 };
 
-// Mock AI responses for demonstration
-const mockAIResponses: Record<string, string> = {
-  default: "Analisando o contexto da conversa, posso ajudar com informações sobre destinos, preços e disponibilidade. O que você gostaria de saber?",
-  mercado: "O mercado de turismo está em alta! Os destinos mais procurados são: Maldivas (+45%), Cancún (+32%) e Fernando de Noronha (+28%). O ticket médio subiu 15% este mês.",
-  cliente: "Este cliente demonstra interesse em viagens de família. Baseado no histórico, recomendo pacotes com atividades para crianças e resorts all-inclusive.",
-  preco: "Para o destino mencionado, temos opções a partir de R$ 3.500 por pessoa (7 noites). Posso gerar um orçamento personalizado se desejar.",
-};
-
 export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, aiEnabled, onToggleAI, onUpdateTags, onDocumentDataCaptured }: AIPanelProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'suggestions' | 'chat'>('suggestions');
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { sendMessage: sendAIMessage, isLoading: isAILoading } = useAIAssistant();
 
   // Modal states
   const [showQuoteSearch, setShowQuoteSearch] = useState(false);
@@ -118,8 +111,8 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
     setTimeout(() => setIsAnalyzing(false), 1500);
   };
 
-  const handleSendAIMessage = () => {
-    if (!inputMessage.trim()) return;
+  const handleSendAIMessage = async () => {
+    if (!inputMessage.trim() || isAILoading) return;
 
     const userMessage: AIChatMessage = {
       id: `msg-${Date.now()}`,
@@ -129,32 +122,37 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const messageToSend = inputMessage;
     setInputMessage('');
-    setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      let response = mockAIResponses.default;
-      const lowerInput = inputMessage.toLowerCase();
-      
-      if (lowerInput.includes('mercado') || lowerInput.includes('tendência')) {
-        response = mockAIResponses.mercado;
-      } else if (lowerInput.includes('cliente') || lowerInput.includes('perfil')) {
-        response = mockAIResponses.cliente;
-      } else if (lowerInput.includes('preço') || lowerInput.includes('valor') || lowerInput.includes('orçamento')) {
-        response = mockAIResponses.preco;
-      }
+    // Build context from conversation
+    const conversationContext = conversation ? {
+      contactName: conversation.contact.name,
+      category: conversation.category,
+      recentMessages: conversation.messages.slice(-10).map(m => ({
+        sender: m.sender,
+        content: m.content,
+      })),
+    } : undefined;
 
+    // Build messages array for AI
+    const aiMessages = chatMessages.map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+    aiMessages.push({ role: 'user', content: messageToSend });
+
+    const response = await sendAIMessage(aiMessages, conversationContext);
+
+    if (response) {
       const aiMessage: AIChatMessage = {
         id: `msg-${Date.now()}`,
         role: 'assistant',
         content: response,
         timestamp: new Date(),
       };
-
       setChatMessages(prev => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleGenerateQuoteFromSearch = (data: { type: string; title: string; details: string; price?: number }) => {
@@ -511,7 +509,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
                   </div>
                 </div>
               ))}
-              {isTyping && (
+              {isAILoading && (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
                     <div className="flex gap-1">
@@ -543,7 +541,7 @@ export function AIPanel({ conversation, suggestions, packages, onUseSuggestion, 
               <Button
                 size="icon"
                 onClick={handleSendAIMessage}
-                disabled={!inputMessage.trim() || isTyping}
+                disabled={!inputMessage.trim() || isAILoading}
               >
                 <Send className="h-4 w-4" />
               </Button>
