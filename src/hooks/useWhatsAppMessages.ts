@@ -33,6 +33,7 @@ export interface WhatsAppConversation {
 export const useWhatsAppMessages = (conversationId?: string) => {
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -206,6 +207,12 @@ export const useWhatsAppMessages = (conversationId?: string) => {
           
           // Only notify for incoming messages (from contacts, not agents)
           if (newMsg.sender !== 'agent' && newMsg.sender !== 'user') {
+            // Increment unread count for this conversation
+            setUnreadCounts(prev => ({
+              ...prev,
+              [newMsg.conversation_id]: (prev[newMsg.conversation_id] || 0) + 1,
+            }));
+            
             // Don't notify if we're already viewing this conversation
             if (currentConversationIdRef.current !== newMsg.conversation_id) {
               playNotificationSound();
@@ -271,9 +278,19 @@ export const useWhatsAppMessages = (conversationId?: string) => {
     loadConversations();
   }, [loadConversations]);
 
+  // Function to mark conversation as read
+  const markAsRead = useCallback((convId: string) => {
+    setUnreadCounts(prev => {
+      const newCounts = { ...prev };
+      delete newCounts[convId];
+      return newCounts;
+    });
+  }, []);
+
   return {
     messages,
     conversations,
+    unreadCounts,
     loading,
     sending,
     pendingCount,
@@ -281,5 +298,6 @@ export const useWhatsAppMessages = (conversationId?: string) => {
     loadConversations,
     loadMessages,
     setMessages,
+    markAsRead,
   };
 };
