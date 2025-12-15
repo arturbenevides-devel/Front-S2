@@ -6,7 +6,7 @@ export interface WhatsAppMessage {
   id: string;
   conversation_id: string;
   content: string;
-  sender: 'user' | 'agent';
+  sender: 'user' | 'agent' | 'customer';
   timestamp: string;
   message_type: string;
   status: string;
@@ -80,7 +80,7 @@ export const useWhatsAppMessages = (conversationId?: string) => {
         id: msg.id,
         conversation_id: msg.conversation_id,
         content: msg.content,
-        sender: msg.sender as 'user' | 'agent',
+        sender: msg.sender as 'user' | 'agent' | 'customer',
         timestamp: msg.timestamp,
         message_type: msg.message_type || 'text',
         status: msg.status || 'sent',
@@ -204,9 +204,10 @@ export const useWhatsAppMessages = (conversationId?: string) => {
         },
         (payload) => {
           const newMsg = payload.new as { id: string; conversation_id: string; sender: string; content: string };
+          console.log('Realtime message received:', newMsg);
           
-          // Only notify for incoming messages (from contacts, not agents)
-          if (newMsg.sender !== 'agent' && newMsg.sender !== 'user') {
+          // Only notify for incoming messages from customers (not agents)
+          if (newMsg.sender === 'customer') {
             // Increment unread count for this conversation
             setUnreadCounts(prev => ({
               ...prev,

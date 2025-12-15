@@ -26,7 +26,7 @@ const mapWhatsAppMessage = (msg: WhatsAppMessage): Message => ({
   conversationId: msg.conversation_id,
   content: msg.content,
   timestamp: new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-  sender: msg.sender === 'agent' ? 'user' : 'contact',
+  sender: msg.sender === 'agent' ? 'user' : 'contact', // 'customer' or 'user' (old) maps to 'contact'
   status: msg.status === 'read' ? 'read' : msg.status === 'delivered' ? 'delivered' : 'sent',
   type: msg.message_type as 'text' | 'image' | 'document' | 'audio',
 });
