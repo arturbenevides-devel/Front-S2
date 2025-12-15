@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 export interface WhatsAppMessage {
   id: string;
   conversation_id: string;
@@ -35,7 +35,10 @@ export const useWhatsAppMessages = (conversationId?: string) => {
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const { toast } = useToast();
+  const { playNotificationSound } = useNotificationSound();
+  const currentConversationIdRef = useRef<string | undefined>(conversationId);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -141,6 +144,17 @@ export const useWhatsAppMessages = (conversationId?: string) => {
     }
   }, [toast]);
 
+  // Keep ref updated
+  useEffect(() => {
+    currentConversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  // Update pending count when conversations change
+  useEffect(() => {
+    const count = conversations.filter(c => c.read_status === 'pending').length;
+    setPendingCount(count);
+  }, [conversations]);
+
   // Subscribe to realtime updates
   useEffect(() => {
     const conversationsChannel = supabase
@@ -155,7 +169,17 @@ export const useWhatsAppMessages = (conversationId?: string) => {
         (payload) => {
           console.log('Conversation change:', payload);
           if (payload.eventType === 'INSERT') {
-            setConversations(prev => [payload.new as WhatsAppConversation, ...prev]);
+            const newConv = payload.new as WhatsAppConversation;
+            setConversations(prev => [newConv, ...prev]);
+            
+            // Notify for new pending conversations
+            if (newConv.read_status === 'pending') {
+              playNotificationSound();
+              toast({
+                title: 'Nova conversa!',
+                description: `${newConv.contact_name || newConv.contact_phone} iniciou uma conversa`,
+              });
+            }
           } else if (payload.eventType === 'UPDATE') {
             setConversations(prev => 
               prev.map(c => c.id === payload.new.id ? payload.new as WhatsAppConversation : c)
@@ -167,10 +191,42 @@ export const useWhatsAppMessages = (conversationId?: string) => {
       )
       .subscribe();
 
+    // Global messages channel for notifications
+    const globalMessagesChannel = supabase
+      .channel('whatsapp-all-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'whatsapp_messages',
+        },
+        (payload) => {
+          const newMsg = payload.new as { id: string; conversation_id: string; sender: string; content: string };
+          
+          // Only notify for incoming messages (from contacts, not agents)
+          if (newMsg.sender !== 'agent' && newMsg.sender !== 'user') {
+            // Don't notify if we're already viewing this conversation
+            if (currentConversationIdRef.current !== newMsg.conversation_id) {
+              playNotificationSound();
+              
+              // Find conversation to get contact name
+              const conv = conversations.find(c => c.id === newMsg.conversation_id);
+              toast({
+                title: conv?.contact_name || 'Nova mensagem',
+                description: newMsg.content.substring(0, 50) + (newMsg.content.length > 50 ? '...' : ''),
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(conversationsChannel);
+      supabase.removeChannel(globalMessagesChannel);
     };
-  }, []);
+  }, [playNotificationSound, toast, conversations]);
 
   // Subscribe to messages for current conversation
   useEffect(() => {
@@ -220,6 +276,7 @@ export const useWhatsAppMessages = (conversationId?: string) => {
     conversations,
     loading,
     sending,
+    pendingCount,
     sendMessage,
     loadConversations,
     loadMessages,
