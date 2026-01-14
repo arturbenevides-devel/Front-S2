@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { CompleteSaleModal } from './CompleteSaleModal';
 import { CompleteServiceModal } from './CompleteServiceModal';
 import { useWhatsAppMessages, WhatsAppMessage } from '@/hooks/useWhatsAppMessages';
 import { InternalNotesPanel } from './InternalNotesPanel';
+import { useConversationEvents, ConversationEvent } from '@/hooks/useConversationEvents';
+import { ConversationEventItem } from './ConversationEventItem';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -84,11 +86,50 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
     loadMessages 
   } = useWhatsAppMessages(conversation?.id);
 
+  // Use conversation events hook
+  const { events, loading: eventsLoading } = useConversationEvents(conversation?.id);
+
   // Map WhatsApp messages to CRM format
   const realMessages: Message[] = whatsappMessages.map(mapWhatsAppMessage);
   
   // Use real messages if available, otherwise fall back to conversation.messages
   const displayMessages = realMessages.length > 0 ? realMessages : conversation?.messages || [];
+
+  // Merge messages and events into a single timeline sorted by timestamp
+  type TimelineItem = 
+    | { type: 'message'; data: Message; timestamp: Date }
+    | { type: 'event'; data: ConversationEvent; timestamp: Date };
+
+  const timeline = useMemo<TimelineItem[]>(() => {
+    const items: TimelineItem[] = [];
+
+    // Add messages
+    displayMessages.forEach((msg) => {
+      // Parse timestamp - messages have time string like "10:30"
+      // We need to use the message id or approximate time
+      items.push({
+        type: 'message',
+        data: msg,
+        timestamp: new Date(0), // Will be sorted by order in array
+      });
+    });
+
+    // Add events with proper timestamps
+    events.forEach((event) => {
+      items.push({
+        type: 'event',
+        data: event,
+        timestamp: new Date(event.created_at),
+      });
+    });
+
+    // Since messages don't have full timestamps, we'll interleave events
+    // based on their position in the conversation flow
+    // For now, we'll just append events at the end if messages don't have full timestamps
+    // A better solution would be to store full timestamps in messages
+
+    return items;
+  }, [displayMessages, events]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -228,20 +269,33 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages & Events Timeline */}
       <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
-        {loading ? (
+        {loading || eventsLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="flex flex-col gap-3">
+            {/* Render messages */}
             {displayMessages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
+            
+            {/* Render events after messages (since we don't have full message timestamps) */}
+            {events.length > 0 && (
+              <div className="border-t border-dashed border-muted-foreground/20 pt-3 mt-2">
+                <p className="text-center text-xs text-muted-foreground mb-2">
+                  Histórico de Eventos
+                </p>
+                {events.map((event) => (
+                  <ConversationEventItem key={event.id} event={event} />
+                ))}
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
-      )}
+        )}
       </div>
 
       {/* Internal Notes Panel */}
