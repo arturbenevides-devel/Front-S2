@@ -9,6 +9,7 @@ import { Conversation, Message } from '@/types/crm';
 import { CompleteSaleModal } from './CompleteSaleModal';
 import { CompleteServiceModal } from './CompleteServiceModal';
 import { useWhatsAppMessages, WhatsAppMessage } from '@/hooks/useWhatsAppMessages';
+import { InternalNotesPanel } from './InternalNotesPanel';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -240,8 +241,11 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
             ))}
             <div ref={messagesEndRef} />
           </div>
-        )}
+      )}
       </div>
+
+      {/* Internal Notes Panel */}
+      <InternalNotesPanel conversationId={conversation.id} />
 
       {/* Input */}
       <div className="border-t border-border bg-card p-2 sm:p-3">

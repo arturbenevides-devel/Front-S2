@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_internal_notes: {
+        Row: {
+          author_department: string
+          author_name: string
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          author_department: string
+          author_name: string
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          author_department?: string
+          author_name?: string
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_internal_notes_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_conversations: {
         Row: {
           ai_enabled: boolean | null
