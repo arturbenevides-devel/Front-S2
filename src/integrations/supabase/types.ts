@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_events: {
+        Row: {
+          actor_department: string | null
+          actor_name: string | null
+          conversation_id: string
+          created_at: string
+          event_data: Json
+          event_type: string
+          id: string
+        }
+        Insert: {
+          actor_department?: string | null
+          actor_name?: string | null
+          conversation_id: string
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          id?: string
+        }
+        Update: {
+          actor_department?: string | null
+          actor_name?: string | null
+          conversation_id?: string
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_internal_notes: {
         Row: {
           author_department: string
