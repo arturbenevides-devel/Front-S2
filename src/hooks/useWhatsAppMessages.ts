@@ -41,9 +41,9 @@ export const useWhatsAppMessages = (conversationId?: string) => {
   const { playNotificationSound } = useNotificationSound();
   const currentConversationIdRef = useRef<string | undefined>(conversationId);
 
-  // Load conversations
-  const loadConversations = useCallback(async () => {
-    setLoading(true);
+  // Load conversations (silent=true skips loading indicator for polling)
+  const loadConversations = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('whatsapp_conversations')
@@ -54,19 +54,21 @@ export const useWhatsAppMessages = (conversationId?: string) => {
       setConversations(data || []);
     } catch (error) {
       console.error('Error loading conversations:', error);
-      toast({
-        title: 'Erro ao carregar conversas',
-        description: 'Não foi possível carregar as conversas.',
-        variant: 'destructive',
-      });
+      if (!silent) {
+        toast({
+          title: 'Erro ao carregar conversas',
+          description: 'Não foi possível carregar as conversas.',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [toast]);
 
-  // Load messages for a conversation
-  const loadMessages = useCallback(async (convId: string) => {
-    setLoading(true);
+  // Load messages for a conversation (silent=true skips loading indicator for polling)
+  const loadMessages = useCallback(async (convId: string, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('whatsapp_messages')
@@ -90,13 +92,15 @@ export const useWhatsAppMessages = (conversationId?: string) => {
       setMessages(formattedMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
-      toast({
-        title: 'Erro ao carregar mensagens',
-        description: 'Não foi possível carregar as mensagens.',
-        variant: 'destructive',
-      });
+      if (!silent) {
+        toast({
+          title: 'Erro ao carregar mensagens',
+          description: 'Não foi possível carregar as mensagens.',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [toast]);
 
@@ -267,18 +271,18 @@ export const useWhatsAppMessages = (conversationId?: string) => {
     };
   }, [conversationId]);
 
-  // Load messages when conversationId changes + polling fallback
+  // Load messages when conversationId changes + silent polling fallback
   useEffect(() => {
     if (!conversationId) return;
     loadMessages(conversationId);
-    const interval = setInterval(() => loadMessages(conversationId), 5000);
+    const interval = setInterval(() => loadMessages(conversationId, true), 5000);
     return () => clearInterval(interval);
   }, [conversationId, loadMessages]);
 
-  // Initial load + polling fallback for conversations
+  // Initial load + silent polling fallback for conversations
   useEffect(() => {
     loadConversations();
-    const interval = setInterval(loadConversations, 5000);
+    const interval = setInterval(() => loadConversations(true), 5000);
     return () => clearInterval(interval);
   }, [loadConversations]);
 
