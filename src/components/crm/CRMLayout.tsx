@@ -9,6 +9,7 @@ import { TaskManagement } from './TaskManagement';
 import { AdminPanel } from './AdminPanel';
 import { SupervisionPanel } from './SupervisionPanel';
 import { UnresponsedAlert } from './UnresponsedAlert';
+import { CampaignManagement } from './CampaignManagement';
 import { GamificationDashboard } from './gamification/GamificationDashboard';
 import { AgentProfile } from './gamification/AgentProfile';
 import { currentAgent } from '@/data/gamificationData';
@@ -18,12 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useWhatsAppMessages, WhatsAppConversation } from '@/hooks/useWhatsAppMessages';
 import { useAutopilot } from '@/hooks/useAutopilot';
-import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2 } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
-type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision' | 'gamification';
+type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision' | 'gamification' | 'campaigns';
 type MobilePanel = 'list' | 'chat' | 'ai';
 
 // Mock initial tasks for demonstration
@@ -187,11 +188,17 @@ export function CRMLayout() {
   }, [toast, updateConversationLocal]);
 
   const handleSelectConversation = useCallback((conversation: Conversation) => {
-    // If there's a selected conversation and user is switching, show task modal
+    // If there's a selected conversation and user is switching, check for existing future task
     if (selectedConversation && selectedConversation.id !== conversation.id) {
-      setPendingConversationChange(conversation);
-      setShowTaskModal(true);
-      return;
+      const hasFutureTask = tasks.some(
+        t => t.conversationId === selectedConversation.id && !t.completed && new Date(t.scheduledDate) > new Date()
+      );
+      if (!hasFutureTask) {
+        setPendingConversationChange(conversation);
+        setShowTaskModal(true);
+        return;
+      }
+      // Has future task, skip modal and switch directly
     }
 
     // Mark as read when selecting
@@ -200,7 +207,7 @@ export function CRMLayout() {
     setSelectedConversation({ ...conversation, unreadCount: 0, readStatus: 'read' });
     setViewMode('chat');
     setMobilePanel('chat');
-  }, [selectedConversation, updateConversationLocal, markAsRead]);
+  }, [selectedConversation, tasks, updateConversationLocal, markAsRead]);
 
   const handleSendMessage = (content: string) => {
     if (!selectedConversation) return;
@@ -467,6 +474,15 @@ export function CRMLayout() {
                 Gamificação
               </Button>
             )}
+            <Button
+              variant={viewMode === 'campaigns' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('campaigns')}
+              className="flex-1 gap-2"
+            >
+              <Megaphone className="w-4 h-4" />
+              Campanhas
+            </Button>
           </div>
           {/* Agent Profile Mini */}
           {gamificationEnabled && (
@@ -546,6 +562,8 @@ export function CRMLayout() {
           />
         ) : viewMode === 'gamification' && gamificationEnabled ? (
           <GamificationDashboard />
+        ) : viewMode === 'campaigns' ? (
+          <CampaignManagement />
         ) : (
           <MetricsDashboard />
         )}
@@ -571,6 +589,7 @@ export function CRMLayout() {
                 : viewMode === 'tasks' ? 'Tarefas'
                 : viewMode === 'dashboard' ? 'Métricas'
                 : viewMode === 'admin' ? 'Administração'
+                : viewMode === 'campaigns' ? 'Campanhas'
                 : 'Supervisão'
               }
             </h1>
@@ -636,6 +655,14 @@ export function CRMLayout() {
                     >
                       <Eye className="w-5 h-5" />
                       Supervisão
+                    </Button>
+                    <Button
+                      variant={viewMode === 'campaigns' ? 'default' : 'ghost'}
+                      className="justify-start gap-3"
+                      onClick={() => { setViewMode('campaigns'); setShowMobileMenu(false); }}
+                    >
+                      <Megaphone className="w-5 h-5" />
+                      Campanhas
                     </Button>
                   </div>
                 </div>
@@ -706,6 +733,8 @@ export function CRMLayout() {
               dismissedReports={dismissedReports}
               onViewConversation={handleNavigateToTask}
             />
+          ) : viewMode === 'campaigns' ? (
+            <CampaignManagement />
           ) : (
             <MetricsDashboard />
           )}
