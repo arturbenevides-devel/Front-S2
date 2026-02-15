@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { WhatsAppMessage } from '@/hooks/useWhatsAppMessages';
 import { Sparkles, Copy, Send, ChevronRight, CreditCard, User, RefreshCw, MessageCircle, Power, Bot, FileText, Map, Zap, FileDown, ScanText, Image, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +29,7 @@ interface AIPanelProps {
   onToggleAI: (enabled: boolean) => void;
   onUpdateTags?: (conversationId: string, tags: string[]) => void;
   onDocumentDataCaptured?: (data: { name?: string; cpf?: string; birthDate?: string }) => void;
+  whatsappMessages?: WhatsAppMessage[];
   autopilotEnabled?: boolean;
   onAutopilotToggle?: (enabled: boolean) => void;
 }
@@ -53,6 +55,7 @@ export function AIPanel({
   onToggleAI, 
   onUpdateTags, 
   onDocumentDataCaptured,
+  whatsappMessages = [],
   autopilotEnabled = false,
   onAutopilotToggle,
 }: AIPanelProps) {
@@ -105,16 +108,25 @@ export function AIPanel({
     children: 0,
   } : undefined;
 
-  // Get conversation context for AI
+  // Get conversation context for AI - use real WhatsApp messages
   const getConversationContext = () => {
     if (!conversation) return undefined;
+    
+    // Use real WhatsApp messages if available, fallback to conversation.messages
+    const recentMessages = whatsappMessages.length > 0
+      ? whatsappMessages.slice(-15).map(m => ({
+          sender: m.sender === 'agent' ? 'user' : 'contact',
+          content: m.content,
+        }))
+      : conversation.messages.slice(-15).map(m => ({
+          sender: m.sender,
+          content: m.content,
+        }));
+
     return {
       contactName: conversation.contact.name,
       category: conversation.category,
-      recentMessages: conversation.messages.slice(-15).map(m => ({
-        sender: m.sender,
-        content: m.content,
-      })),
+      recentMessages,
     };
   };
 
@@ -190,14 +202,19 @@ export function AIPanel({
     const messageToSend = inputMessage;
     setInputMessage('');
 
-    // Build context from conversation
+    // Build context from conversation using real WhatsApp messages
     const conversationContext = conversation ? {
       contactName: conversation.contact.name,
       category: conversation.category,
-      recentMessages: conversation.messages.slice(-10).map(m => ({
-        sender: m.sender,
-        content: m.content,
-      })),
+      recentMessages: whatsappMessages.length > 0
+        ? whatsappMessages.slice(-10).map(m => ({
+            sender: m.sender === 'agent' ? 'user' : 'contact',
+            content: m.content,
+          }))
+        : conversation.messages.slice(-10).map(m => ({
+            sender: m.sender,
+            content: m.content,
+          })),
     } : undefined;
 
     // Build messages array for AI

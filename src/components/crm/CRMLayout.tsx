@@ -128,6 +128,7 @@ export function CRMLayout() {
   }, []);
 
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const { messages: selectedConversationMessages } = useWhatsAppMessages(selectedConversation?.id);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [tasks, setTasks] = useState<CustomerTask[]>(initialTasks);
   const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>(initialDismissedReports);
@@ -511,6 +512,7 @@ export function CRMLayout() {
                 onToggleAI={handleToggleAI}
                 onUpdateTags={handleUpdateTags}
                 onDocumentDataCaptured={setCapturedDocumentData}
+                whatsappMessages={selectedConversationMessages}
                 autopilotEnabled={selectedConversation ? isAutopilotActive(selectedConversation.id) : false}
                 onAutopilotToggle={(enabled) => {
                   if (selectedConversation) {
@@ -675,6 +677,7 @@ export function CRMLayout() {
                   onToggleAI={handleToggleAI}
                   onUpdateTags={handleUpdateTags}
                   onDocumentDataCaptured={setCapturedDocumentData}
+                  whatsappMessages={selectedConversationMessages}
                   autopilotEnabled={selectedConversation ? isAutopilotActive(selectedConversation.id) : false}
                   onAutopilotToggle={(enabled) => {
                     if (selectedConversation) {
