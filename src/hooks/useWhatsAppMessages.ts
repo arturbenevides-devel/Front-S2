@@ -267,16 +267,19 @@ export const useWhatsAppMessages = (conversationId?: string) => {
     };
   }, [conversationId]);
 
-  // Load messages when conversationId changes
+  // Load messages when conversationId changes + polling fallback
   useEffect(() => {
-    if (conversationId) {
-      loadMessages(conversationId);
-    }
+    if (!conversationId) return;
+    loadMessages(conversationId);
+    const interval = setInterval(() => loadMessages(conversationId), 5000);
+    return () => clearInterval(interval);
   }, [conversationId, loadMessages]);
 
-  // Initial load of conversations
+  // Initial load + polling fallback for conversations
   useEffect(() => {
     loadConversations();
+    const interval = setInterval(loadConversations, 5000);
+    return () => clearInterval(interval);
   }, [loadConversations]);
 
   // Function to mark conversation as read
