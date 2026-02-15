@@ -14,6 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_lead_assignments: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_lead_assignments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_lead_assignments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_leads: {
+        Row: {
+          additional_interests: string[] | null
+          contact_name: string
+          contact_phone: string | null
+          conversation_id: string
+          created_at: string
+          destination: string
+          id: string
+          interest: string | null
+          notes: string | null
+          origin: string | null
+          travel_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_interests?: string[] | null
+          contact_name: string
+          contact_phone?: string | null
+          conversation_id: string
+          created_at?: string
+          destination: string
+          id?: string
+          interest?: string | null
+          notes?: string | null
+          origin?: string | null
+          travel_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_interests?: string[] | null
+          contact_name?: string
+          contact_phone?: string | null
+          conversation_id?: string
+          created_at?: string
+          destination?: string
+          id?: string
+          interest?: string | null
+          notes?: string | null
+          origin?: string | null
+          travel_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          destination: string | null
+          id: string
+          interest: string | null
+          name: string
+          scheduled_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          destination?: string | null
+          id?: string
+          interest?: string | null
+          name: string
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          destination?: string | null
+          id?: string
+          interest?: string | null
+          name?: string
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversation_events: {
         Row: {
           actor_department: string | null
