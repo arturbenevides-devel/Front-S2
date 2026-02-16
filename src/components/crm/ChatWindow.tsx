@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Send, Paperclip, Smile, Mic, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2, FileAudio, Languages } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +12,10 @@ import { useWhatsAppMessages, WhatsAppMessage } from '@/hooks/useWhatsAppMessage
 import { InternalNotesPanel } from './InternalNotesPanel';
 import { useConversationEvents, ConversationEvent } from '@/hooks/useConversationEvents';
 import { ConversationEventItem } from './ConversationEventItem';
+import { EmojiPicker } from './EmojiPicker';
+import { AudioRecorder } from './AudioRecorder';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -24,41 +28,108 @@ interface ChatWindowProps {
 }
 
 // Map WhatsApp message to CRM Message format
-const mapWhatsAppMessage = (msg: WhatsAppMessage): Message => ({
+const mapWhatsAppMessage = (msg: WhatsAppMessage): Message & { metadata?: Record<string, unknown> } => ({
   id: msg.id,
   conversationId: msg.conversation_id,
   content: msg.content,
   timestamp: new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-  sender: msg.sender === 'agent' ? 'user' : 'contact', // 'customer' or 'user' (old) maps to 'contact'
+  sender: msg.sender === 'agent' ? 'user' : 'contact',
   status: msg.status === 'read' ? 'read' : msg.status === 'delivered' ? 'delivered' : 'sent',
   type: msg.message_type as 'text' | 'image' | 'document' | 'audio',
+  metadata: msg.metadata,
 });
 
-function MessageBubble({ message }: { message: Message }) {
+function AudioMessageBubble({ message, metadata }: { message: Message; metadata?: Record<string, unknown> }) {
   const isUser = message.sender === 'user';
+  const [transcription, setTranscription] = useState<string | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const { toast } = useToast();
+
+  // Try to get audio URL from metadata
+  const audioUrl = (metadata as Record<string, unknown>)?.downloadUrl as string | undefined;
+
+  const handleTranscribe = async () => {
+    setTranscribing(true);
+    try {
+      const body: Record<string, string> = {};
+      if (audioUrl) {
+        body.audioUrl = audioUrl;
+      }
+      
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', { body });
+      if (error) throw error;
+      
+      if (data?.transcription) {
+        setTranscription(data.transcription);
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      toast({ title: 'Erro na transcrição', variant: 'destructive' });
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   return (
-    <div
-      className={cn(
-        'flex animate-slide-up',
-        isUser ? 'justify-end' : 'justify-start'
-      )}
-    >
-      <div
-        className={cn(
-          'max-w-[70%] rounded-2xl px-4 py-2.5 shadow-soft',
-          isUser
-            ? 'rounded-br-md bg-chat-out text-foreground'
-            : 'rounded-bl-md bg-chat-in text-foreground'
+    <div className={cn('flex animate-slide-up', isUser ? 'justify-end' : 'justify-start')}>
+      <div className={cn(
+        'max-w-[70%] rounded-2xl px-4 py-2.5 shadow-soft',
+        isUser ? 'rounded-br-md bg-chat-out text-foreground' : 'rounded-bl-md bg-chat-in text-foreground'
+      )}>
+        <div className="flex items-center gap-2">
+          <FileAudio className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm">🎵 Mensagem de áudio</span>
+        </div>
+        {audioUrl && (
+          <audio controls className="mt-2 max-w-full h-8" preload="none">
+            <source src={audioUrl} />
+          </audio>
         )}
-      >
-        <p className="text-sm leading-relaxed">{message.content}</p>
-        <div
-          className={cn(
-            'mt-1 flex items-center gap-1 text-xs text-muted-foreground',
-            isUser && 'justify-end'
+        {!isUser && !transcription && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-1 text-xs gap-1 h-6 px-2 text-primary"
+            onClick={handleTranscribe}
+            disabled={transcribing}
+          >
+            {transcribing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+            {transcribing ? 'Transcrevendo...' : 'Transcrever'}
+          </Button>
+        )}
+        {transcription && (
+          <p className="mt-1.5 text-xs italic text-muted-foreground border-t border-border/50 pt-1.5">
+            📝 {transcription}
+          </p>
+        )}
+        <div className={cn('mt-1 flex items-center gap-1 text-xs text-muted-foreground', isUser && 'justify-end')}>
+          <span>{message.timestamp}</span>
+          {isUser && message.status && (
+            <span className="text-primary">
+              {message.status === 'read' ? '✓✓' : message.status === 'delivered' ? '✓✓' : '✓'}
+            </span>
           )}
-        >
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({ message, metadata }: { message: Message; metadata?: Record<string, unknown> }) {
+  const isUser = message.sender === 'user';
+
+  if (message.type === 'audio') {
+    return <AudioMessageBubble message={message} metadata={metadata} />;
+  }
+
+  return (
+    <div className={cn('flex animate-slide-up', isUser ? 'justify-end' : 'justify-start')}>
+      <div className={cn(
+        'max-w-[70%] rounded-2xl px-4 py-2.5 shadow-soft',
+        isUser ? 'rounded-br-md bg-chat-out text-foreground' : 'rounded-bl-md bg-chat-in text-foreground'
+      )}>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        <div className={cn('mt-1 flex items-center gap-1 text-xs text-muted-foreground', isUser && 'justify-end')}>
           <span>{message.timestamp}</span>
           {isUser && message.status && (
             <span className="text-primary">
@@ -75,9 +146,11 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
   const [message, setMessage] = useState('');
   const [showCompleteSale, setShowCompleteSale] = useState(false);
   const [showCompleteService, setShowCompleteService] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [sendingAudio, setSendingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  // Use WhatsApp hook for real messages
   const { 
     messages: whatsappMessages, 
     loading, 
@@ -86,83 +159,29 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
     loadMessages 
   } = useWhatsAppMessages(conversation?.id);
 
-  // Use conversation events hook
   const { events, loading: eventsLoading } = useConversationEvents(conversation?.id);
 
-  // Map WhatsApp messages to CRM format
-  const realMessages: Message[] = whatsappMessages.map(mapWhatsAppMessage);
-  
-  // Use real messages if available, otherwise fall back to conversation.messages
-  const displayMessages = realMessages.length > 0 ? realMessages : conversation?.messages || [];
-
-  // Merge messages and events into a single timeline sorted by timestamp
-  type TimelineItem = 
-    | { type: 'message'; data: Message; timestamp: Date }
-    | { type: 'event'; data: ConversationEvent; timestamp: Date };
-
-  const timeline = useMemo<TimelineItem[]>(() => {
-    const items: TimelineItem[] = [];
-
-    // Add messages
-    displayMessages.forEach((msg) => {
-      // Parse timestamp - messages have time string like "10:30"
-      // We need to use the message id or approximate time
-      items.push({
-        type: 'message',
-        data: msg,
-        timestamp: new Date(0), // Will be sorted by order in array
-      });
-    });
-
-    // Add events with proper timestamps
-    events.forEach((event) => {
-      items.push({
-        type: 'event',
-        data: event,
-        timestamp: new Date(event.created_at),
-      });
-    });
-
-    // Since messages don't have full timestamps, we'll interleave events
-    // based on their position in the conversation flow
-    // For now, we'll just append events at the end if messages don't have full timestamps
-    // A better solution would be to store full timestamps in messages
-
-    return items;
-  }, [displayMessages, events]);
+  const mappedMessages = whatsappMessages.map(mapWhatsAppMessage);
+  const displayMessages = mappedMessages.length > 0 ? mappedMessages : conversation?.messages || [];
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayMessages]);
 
-  // Get chat_id from conversation (for Green API)
   const getChatId = (): string | null => {
-    // Use chatId from conversation if available (from DB)
-    if (conversation?.chatId) {
-      return conversation.chatId;
-    }
-    // Fallback: construct from phone number
+    if (conversation?.chatId) return conversation.chatId;
     const phone = conversation?.contact.phone?.replace(/\D/g, '');
-    if (phone) {
-      return `${phone}@c.us`;
-    }
-    return null;
+    return phone ? `${phone}@c.us` : null;
   };
 
   const handleSend = async () => {
     if (!message.trim() || !conversation) return;
-
     const chatId = getChatId();
-    
     if (chatId) {
-      // Send via Edge Function (real WhatsApp)
       const result = await sendWhatsAppMessage(chatId, message, conversation.id);
-      if (result.success) {
-        setMessage('');
-      }
+      if (result.success) setMessage('');
     } else {
-      // Fallback to mock send
       onSendMessage(message);
       setMessage('');
     }
@@ -174,6 +193,35 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
       handleSend();
     }
   };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleSendAudio = useCallback(async (audioBase64: string) => {
+    if (!conversation) return;
+    const chatId = getChatId();
+    if (!chatId) {
+      toast({ title: 'Não foi possível identificar o destinatário', variant: 'destructive' });
+      return;
+    }
+
+    setSendingAudio(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-send-audio', {
+        body: { chatId, audioBase64, conversationId: conversation.id },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Falha ao enviar áudio');
+      toast({ title: 'Áudio enviado!' });
+    } catch (err) {
+      console.error('Error sending audio:', err);
+      toast({ title: 'Erro ao enviar áudio', variant: 'destructive' });
+    } finally {
+      setSendingAudio(false);
+    }
+  }, [conversation, toast]);
 
   if (!conversation) {
     return (
@@ -216,45 +264,25 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
               )}
               <div className="hidden sm:flex items-center gap-2">
                 {conversation.contact.tags?.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
+                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                 ))}
               </div>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button
-            size="sm" 
-            className="gap-1.5 text-xs bg-success hover:bg-success/90 hidden sm:flex"
-            onClick={() => setShowCompleteSale(true)}
-          >
+          <Button size="sm" className="gap-1.5 text-xs bg-success hover:bg-success/90 hidden sm:flex" onClick={() => setShowCompleteSale(true)}>
             <ShoppingCart className="h-4 w-4" />
             <span className="hidden md:inline">Concluir Venda</span>
           </Button>
-          <Button 
-            size="icon" 
-            className="sm:hidden h-8 w-8 bg-success hover:bg-success/90"
-            onClick={() => setShowCompleteSale(true)}
-          >
+          <Button size="icon" className="sm:hidden h-8 w-8 bg-success hover:bg-success/90" onClick={() => setShowCompleteSale(true)}>
             <ShoppingCart className="h-4 w-4" />
           </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="gap-1.5 text-xs hidden sm:flex border-primary text-primary hover:bg-primary/10"
-            onClick={() => setShowCompleteService(true)}
-          >
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs hidden sm:flex border-primary text-primary hover:bg-primary/10" onClick={() => setShowCompleteService(true)}>
             <CheckCircle2 className="h-4 w-4" />
             <span className="hidden md:inline">Concluir Atendimento</span>
           </Button>
-          <Button 
-            size="icon" 
-            variant="outline"
-            className="sm:hidden h-8 w-8 border-primary text-primary hover:bg-primary/10"
-            onClick={() => setShowCompleteService(true)}
-          >
+          <Button size="icon" variant="outline" className="sm:hidden h-8 w-8 border-primary text-primary hover:bg-primary/10" onClick={() => setShowCompleteService(true)}>
             <CheckCircle2 className="h-4 w-4" />
           </Button>
           <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary hidden sm:flex h-8 w-8">
@@ -277,17 +305,17 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {/* Render messages */}
             {displayMessages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble 
+                key={msg.id} 
+                message={msg} 
+                metadata={(msg as Message & { metadata?: Record<string, unknown> }).metadata}
+              />
             ))}
             
-            {/* Render events after messages (since we don't have full message timestamps) */}
             {events.length > 0 && (
               <div className="border-t border-dashed border-muted-foreground/20 pt-3 mt-2">
-                <p className="text-center text-xs text-muted-foreground mb-2">
-                  Histórico de Eventos
-                </p>
+                <p className="text-center text-xs text-muted-foreground mb-2">Histórico de Eventos</p>
                 {events.map((event) => (
                   <ConversationEventItem key={event.id} event={event} />
                 ))}
@@ -303,37 +331,52 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
 
       {/* Input */}
       <div className="border-t border-border bg-card p-2 sm:p-3">
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10 hidden sm:flex">
-            <Smile className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center gap-1 sm:gap-2 relative">
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
+              <Smile className="h-5 w-5" />
+            </Button>
+            {showEmojiPicker && (
+              <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
+            )}
+          </div>
           <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
             <Paperclip className="h-5 w-5" />
           </Button>
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Digite uma mensagem..."
-            className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
-          />
           {message.trim() ? (
-            <Button 
-              size="icon" 
-              onClick={handleSend} 
-              disabled={sending}
-              className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-              )}
-            </Button>
+            <>
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Digite uma mensagem..."
+                className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
+              />
+              <Button 
+                size="icon" 
+                onClick={handleSend} 
+                disabled={sending}
+                className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10"
+              >
+                {sending ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <Send className="h-4 w-4 sm:h-5 sm:w-5" />}
+              </Button>
+            </>
           ) : (
-            <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-10 sm:w-10">
-              <Mic className="h-5 w-5" />
-            </Button>
+            <>
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Digite uma mensagem..."
+                className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
+              />
+              <AudioRecorder onSend={handleSendAudio} sending={sendingAudio} />
+            </>
           )}
         </div>
       </div>
@@ -345,7 +388,6 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
         contactName={conversation.contact.name}
         capturedClientData={capturedDocumentData || undefined}
       />
-
       <CompleteServiceModal
         open={showCompleteService}
         onClose={() => setShowCompleteService(false)}
