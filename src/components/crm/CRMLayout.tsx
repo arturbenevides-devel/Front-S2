@@ -147,6 +147,7 @@ export function CRMLayout() {
   const previousPendingCountRef = useRef<number>(0);
   const [newLeadAlert, setNewLeadAlert] = useState(false);
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
+  const [completedServiceConversations, setCompletedServiceConversations] = useState<Set<string>>(new Set());
 
   // Count pending conversations
   const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
@@ -188,17 +189,18 @@ export function CRMLayout() {
   }, [toast, updateConversationLocal]);
 
   const handleSelectConversation = useCallback((conversation: Conversation) => {
-    // If there's a selected conversation and user is switching, check for existing future task
+    // If there's a selected conversation and user is switching, check for existing future task or completed service
     if (selectedConversation && selectedConversation.id !== conversation.id) {
       const hasFutureTask = tasks.some(
         t => t.conversationId === selectedConversation.id && !t.completed && new Date(t.scheduledDate) > new Date()
       );
-      if (!hasFutureTask) {
+      const hasCompletedService = completedServiceConversations.has(selectedConversation.id);
+      if (!hasFutureTask && !hasCompletedService) {
         setPendingConversationChange(conversation);
         setShowTaskModal(true);
         return;
       }
-      // Has future task, skip modal and switch directly
+      // Has future task or completed service, skip modal and switch directly
     }
 
     // Mark as read when selecting
@@ -207,7 +209,7 @@ export function CRMLayout() {
     setSelectedConversation({ ...conversation, unreadCount: 0, readStatus: 'read' });
     setViewMode('chat');
     setMobilePanel('chat');
-  }, [selectedConversation, tasks, updateConversationLocal, markAsRead]);
+  }, [selectedConversation, tasks, completedServiceConversations, updateConversationLocal, markAsRead]);
 
   const handleSendMessage = (content: string) => {
     if (!selectedConversation) return;
@@ -397,6 +399,10 @@ export function CRMLayout() {
     }
   };
 
+  const handleServiceCompleted = useCallback((conversationId: string) => {
+    setCompletedServiceConversations(prev => new Set(prev).add(conversationId));
+  }, []);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Desktop Layout */}
@@ -514,6 +520,7 @@ export function CRMLayout() {
                 conversation={selectedConversation}
                 onSendMessage={handleSendMessage}
                 capturedDocumentData={capturedDocumentData}
+                onServiceCompleted={handleServiceCompleted}
               />
             </div>
 
@@ -692,6 +699,7 @@ export function CRMLayout() {
                   conversation={selectedConversation}
                   onSendMessage={handleSendMessage}
                   capturedDocumentData={capturedDocumentData}
+                  onServiceCompleted={handleServiceCompleted}
                 />
               )}
               {mobilePanel === 'ai' && (
