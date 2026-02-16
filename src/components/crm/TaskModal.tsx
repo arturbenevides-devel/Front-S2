@@ -129,7 +129,7 @@ export function TaskModal({ open, conversation, onClose, onSave, onDismiss }: Ta
 
   return (
     <>
-      <Dialog open={open} onOpenChange={() => {}}>
+      <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) { resetForm(); onClose(); } }}>
         <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-base">
