@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ChatWindowProps {
   conversation: Conversation | null;
   onSendMessage: (content: string) => void;
+  onServiceCompleted?: (conversationId: string) => void;
   capturedDocumentData?: {
     name?: string;
     cpf?: string;
@@ -142,7 +143,7 @@ function MessageBubble({ message, metadata }: { message: Message; metadata?: Rec
   );
 }
 
-export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }: ChatWindowProps) {
+export function ChatWindow({ conversation, onSendMessage, onServiceCompleted, capturedDocumentData }: ChatWindowProps) {
   const [message, setMessage] = useState('');
   const [showCompleteSale, setShowCompleteSale] = useState(false);
   const [showCompleteService, setShowCompleteService] = useState(false);
@@ -391,6 +392,11 @@ export function ChatWindow({ conversation, onSendMessage, capturedDocumentData }
       <CompleteServiceModal
         open={showCompleteService}
         onClose={() => setShowCompleteService(false)}
+        onComplete={() => {
+          if (conversation) {
+            onServiceCompleted?.(conversation.id);
+          }
+        }}
         conversation={conversation}
       />
     </div>
