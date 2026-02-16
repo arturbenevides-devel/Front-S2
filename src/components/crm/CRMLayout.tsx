@@ -383,11 +383,26 @@ export function CRMLayout() {
 
     setDismissedReports((prev) => [...prev, newReport]);
 
+    // If "later" dismiss, create a reminder task in 60 minutes
+    if (report.dismissType === 'later' && selectedConversation) {
+      const reminderTask: CustomerTask = {
+        id: `task-dismiss-${Date.now()}`,
+        conversationId: report.conversationId,
+        contactName: report.contactName,
+        status: 'follow_up',
+        nextStep: `⚠️ Lembrete: registrar atividade dispensada para ${report.contactName}`,
+        scheduledDate: new Date(Date.now() + 60 * 60 * 1000),
+        createdAt: new Date(),
+        completed: false,
+      };
+      setTasks((prev) => [...prev, reminderTask]);
+    }
+
     toast({
       title: 'Registro dispensado',
       description: report.dismissType === 'permanent' 
         ? 'A supervisão foi notificada sobre esta dispensa.'
-        : 'Lembre-se de registrar a atividade posteriormente.',
+        : 'Você será lembrado em 60 minutos para registrar a atividade.',
       variant: report.dismissType === 'permanent' ? 'destructive' : 'default',
     });
 
