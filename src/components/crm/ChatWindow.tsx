@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2, FileAudio, Languages } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -332,7 +332,7 @@ export function ChatWindow({ conversation, onSendMessage, onServiceCompleted, ca
 
       {/* Input */}
       <div className="border-t border-border bg-card p-2 sm:p-3">
-        <div className="flex items-center gap-1 sm:gap-2 relative">
+        <div className="flex items-end gap-1 sm:gap-2 relative">
           <div className="relative">
             <Button
               size="icon"
@@ -351,30 +351,32 @@ export function ChatWindow({ conversation, onSendMessage, onServiceCompleted, ca
           </Button>
           {message.trim() ? (
             <>
-              <Input
+              <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
+                className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base min-h-[40px] max-h-[120px] resize-none py-2"
+                rows={1}
               />
               <Button 
                 size="icon" 
                 onClick={handleSend} 
                 disabled={sending}
-                className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10"
+                className="bg-primary hover:bg-primary/90 h-8 w-8 sm:h-10 sm:w-10 self-end"
               >
                 {sending ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <Send className="h-4 w-4 sm:h-5 sm:w-5" />}
               </Button>
             </>
           ) : (
             <>
-              <Input
+              <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base h-9 sm:h-10"
+                className="flex-1 bg-muted/50 border-transparent focus:border-primary text-sm sm:text-base min-h-[40px] max-h-[120px] resize-none py-2"
+                rows={1}
               />
               <AudioRecorder onSend={handleSendAudio} sending={sendingAudio} />
             </>
