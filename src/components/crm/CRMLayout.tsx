@@ -100,6 +100,7 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
     aiEnabled: wa.ai_enabled ?? true,
     readStatus,
     assignedTo: wa.assigned_to || undefined,
+    isGroup: wa.is_group ?? false,
   };
 };
 

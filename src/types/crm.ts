@@ -32,6 +32,7 @@ export interface Conversation {
   aiEnabled?: boolean;
   readStatus: ConversationReadStatus;
   assignedTo?: string; // Agent ID who claimed the conversation
+  isGroup?: boolean;
 }
 
 export interface AISuggestion {

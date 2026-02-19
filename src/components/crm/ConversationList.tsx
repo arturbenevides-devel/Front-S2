@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MessageSquarePlus, X, Tag, Clock, CheckCheck, Circle } from 'lucide-react';
+import { Search, Filter, MessageSquarePlus, X, Tag, Clock, CheckCheck, Circle, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -281,8 +281,16 @@ export function ConversationList({ conversations, selectedId, onSelect, onClaimC
               {/* Avatar */}
               <div className="relative shrink-0">
                 <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium text-sm">
-                    {conversation.contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  <AvatarFallback className={cn(
+                    "font-medium text-sm",
+                    conversation.isGroup 
+                      ? "bg-accent/10 text-accent" 
+                      : "bg-primary/10 text-primary"
+                  )}>
+                    {conversation.isGroup 
+                      ? <Users className="h-5 w-5" />
+                      : conversation.contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                    }
                   </AvatarFallback>
                 </Avatar>
                 {conversation.contact.status === 'online' && (
