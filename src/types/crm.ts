@@ -15,7 +15,7 @@ export interface Message {
   timestamp: string;
   sender: 'user' | 'contact';
   status?: 'sent' | 'delivered' | 'read';
-  type: 'text' | 'image' | 'document' | 'audio';
+  type: 'text' | 'image' | 'document' | 'audio' | 'imageMessage' | 'audioMessage' | 'voiceMessage' | 'videoMessage' | 'documentMessage';
 }
 
 export type ConversationReadStatus = 'pending' | 'unread' | 'read';

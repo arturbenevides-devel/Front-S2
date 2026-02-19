@@ -30,15 +30,34 @@ Deno.serve(async (req) => {
       const chatName = senderData?.chatName || senderName
       const senderPhone = senderData?.sender || chatId?.replace('@c.us', '').replace('@g.us', '') || ''
       
-      const messageContent = messageData?.textMessageData?.textMessage || 
-                            messageData?.extendedTextMessageData?.text ||
-                            messageData?.editedMessageData?.textMessage ||
-                            messageData?.imageMessage?.caption ||
-                            '[Media]'
-      const messageType = messageData?.typeMessage || 'text'
+      const messageType = messageData?.typeMessage || 'textMessage'
+      
+      // Extract content based on message type
+      let messageContent = ''
+      let downloadUrl = ''
+      
+      if (messageType === 'imageMessage') {
+        messageContent = messageData?.fileMessageData?.caption || messageData?.imageMessage?.caption || '📷 Imagem'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else if (messageType === 'audioMessage' || messageType === 'voiceMessage') {
+        messageContent = '🎵 Mensagem de áudio'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else if (messageType === 'videoMessage') {
+        messageContent = messageData?.fileMessageData?.caption || '🎬 Vídeo'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else if (messageType === 'documentMessage') {
+        messageContent = messageData?.fileMessageData?.fileName || '📄 Documento'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else {
+        messageContent = messageData?.textMessageData?.textMessage || 
+                        messageData?.extendedTextMessageData?.text ||
+                        messageData?.editedMessageData?.textMessage ||
+                        '[Media]'
+      }
+      
       const messageId = body.idMessage
 
-      console.log('Processing incoming message:', { chatId, senderName, messageContent, isGroup })
+      console.log('Processing incoming message:', { chatId, senderName, messageContent, messageType, isGroup })
 
       // Find or create conversation
       let { data: conversation } = await supabase
@@ -92,10 +111,12 @@ Deno.serve(async (req) => {
           .eq('id', conversation.id)
       }
 
-      // Insert message - for groups, store senderName in metadata
-      const msgMetadata = isGroup 
-        ? { ...messageData, senderName, senderPhone }
-        : messageData
+      // Insert message - for groups, store senderName in metadata; always store downloadUrl
+      const msgMetadata = {
+        ...(messageData || {}),
+        ...(isGroup ? { senderName, senderPhone } : {}),
+        ...(downloadUrl ? { downloadUrl } : {}),
+      }
 
       const { error: msgError } = await supabase
         .from('whatsapp_messages')
@@ -123,15 +144,33 @@ Deno.serve(async (req) => {
       const isGroup = chatId?.endsWith('@g.us') || false
       const chatName = senderData?.chatName || 'Unknown'
       
-      const messageContent = messageData?.textMessageData?.textMessage || 
-                            messageData?.extendedTextMessageData?.text ||
-                            messageData?.editedMessageData?.textMessage ||
-                            messageData?.imageMessage?.caption ||
-                            '[Media]'
-      const messageType = messageData?.typeMessage || 'text'
+      const messageType = messageData?.typeMessage || 'textMessage'
+      
+      let messageContent = ''
+      let downloadUrl = ''
+      
+      if (messageType === 'imageMessage') {
+        messageContent = messageData?.fileMessageData?.caption || messageData?.imageMessage?.caption || '📷 Imagem'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else if (messageType === 'audioMessage' || messageType === 'voiceMessage') {
+        messageContent = '🎵 Mensagem de áudio'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else if (messageType === 'videoMessage') {
+        messageContent = messageData?.fileMessageData?.caption || '🎬 Vídeo'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else if (messageType === 'documentMessage') {
+        messageContent = messageData?.fileMessageData?.fileName || '📄 Documento'
+        downloadUrl = messageData?.fileMessageData?.downloadUrl || messageData?.downloadUrl || ''
+      } else {
+        messageContent = messageData?.textMessageData?.textMessage || 
+                        messageData?.extendedTextMessageData?.text ||
+                        messageData?.editedMessageData?.textMessage ||
+                        '[Media]'
+      }
+      
       const messageId = body.idMessage
 
-      console.log('Processing outgoing message:', { chatId, messageContent, isGroup })
+      console.log('Processing outgoing message:', { chatId, messageContent, messageType, isGroup })
 
       // Find or create conversation
       let { data: conversation } = await supabase
@@ -197,7 +236,7 @@ Deno.serve(async (req) => {
           message_type: messageType,
           message_id: messageId,
           status: 'sent',
-          metadata: messageData,
+          metadata: { ...(messageData || {}), ...(downloadUrl ? { downloadUrl } : {}) },
         })
 
       if (msgError) {
