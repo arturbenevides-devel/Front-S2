@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2, FileAudio, Languages, Users } from 'lucide-react';
+import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2, FileAudio, Languages, Users, ZoomIn, Image as ImageIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Conversation, Message } from '@/types/crm';
 import { CompleteSaleModal } from './CompleteSaleModal';
@@ -116,6 +117,68 @@ function AudioMessageBubble({ message, metadata }: { message: Message; metadata?
   );
 }
 
+function ImageMessageBubble({ message, metadata }: { message: Message; metadata?: Record<string, unknown> }) {
+  const isUser = message.sender === 'user';
+  const [showFullImage, setShowFullImage] = useState(false);
+  
+  const imageUrl = (metadata?.downloadUrl as string) || 
+                   (metadata?.fileMessageData as Record<string, unknown>)?.downloadUrl as string || '';
+  const caption = message.content && message.content !== '📷 Imagem' ? message.content : undefined;
+
+  return (
+    <>
+      <div className={cn('flex animate-slide-up', isUser ? 'justify-end' : 'justify-start')}>
+        <div className={cn(
+          'max-w-[70%] rounded-2xl overflow-hidden shadow-soft',
+          isUser ? 'rounded-br-md bg-chat-out' : 'rounded-bl-md bg-chat-in'
+        )}>
+          {imageUrl ? (
+            <div className="relative group cursor-pointer" onClick={() => setShowFullImage(true)}>
+              <img 
+                src={imageUrl} 
+                alt="Imagem recebida" 
+                className="max-w-full max-h-72 object-cover" 
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <ZoomIn className="h-8 w-8 text-white drop-shadow-lg" />
+              </div>
+            </div>
+          ) : (
+            <div className="px-4 py-3 flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              <span className="text-sm">📷 Imagem</span>
+            </div>
+          )}
+          {caption && (
+            <p className="px-4 py-1.5 text-sm leading-relaxed whitespace-pre-wrap">{caption}</p>
+          )}
+          <div className={cn('px-4 py-1.5 flex items-center gap-1 text-xs text-muted-foreground', isUser && 'justify-end')}>
+            <span>{message.timestamp}</span>
+            {isUser && message.status && (
+              <span className="text-primary">
+                {message.status === 'read' ? '✓✓' : message.status === 'delivered' ? '✓✓' : '✓'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <Dialog open={showFullImage} onOpenChange={setShowFullImage}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 bg-black/90 border-none">
+          {imageUrl && (
+            <img 
+              src={imageUrl} 
+              alt="Imagem em tamanho real" 
+              className="max-w-full max-h-[85vh] object-contain mx-auto" 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function MessageBubble({ message, metadata, isGroup }: { message: Message; metadata?: Record<string, unknown>; isGroup?: boolean }) {
   const isUser = message.sender === 'user';
   // Try multiple metadata fields to find sender name in group chats
@@ -127,8 +190,12 @@ function MessageBubble({ message, metadata, isGroup }: { message: Message; metad
     undefined
   ) : undefined;
 
-  if (message.type === 'audio') {
+  if (message.type === 'audio' || message.type === 'audioMessage' || message.type === 'voiceMessage') {
     return <AudioMessageBubble message={message} metadata={metadata} />;
+  }
+
+  if (message.type === 'image' || message.type === 'imageMessage') {
+    return <ImageMessageBubble message={message} metadata={metadata} />;
   }
 
   return (
