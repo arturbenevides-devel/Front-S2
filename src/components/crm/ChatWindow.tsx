@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2, FileAudio, Languages } from 'lucide-react';
+import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ShoppingCart, CheckCircle2, Loader2, FileAudio, Languages, Users } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -116,8 +116,9 @@ function AudioMessageBubble({ message, metadata }: { message: Message; metadata?
   );
 }
 
-function MessageBubble({ message, metadata }: { message: Message; metadata?: Record<string, unknown> }) {
+function MessageBubble({ message, metadata, isGroup }: { message: Message; metadata?: Record<string, unknown>; isGroup?: boolean }) {
   const isUser = message.sender === 'user';
+  const senderName = !isUser && isGroup ? (metadata?.senderName as string) : undefined;
 
   if (message.type === 'audio') {
     return <AudioMessageBubble message={message} metadata={metadata} />;
@@ -129,6 +130,9 @@ function MessageBubble({ message, metadata }: { message: Message; metadata?: Rec
         'max-w-[70%] rounded-2xl px-4 py-2.5 shadow-soft',
         isUser ? 'rounded-br-md bg-chat-out text-foreground' : 'rounded-bl-md bg-chat-in text-foreground'
       )}>
+        {senderName && (
+          <p className="text-xs font-semibold text-primary mb-0.5">{senderName}</p>
+        )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         <div className={cn('mt-1 flex items-center gap-1 text-xs text-muted-foreground', isUser && 'justify-end')}>
           <span>{message.timestamp}</span>
@@ -246,12 +250,21 @@ export function ChatWindow({ conversation, onSendMessage, onServiceCompleted, ca
       <div className="flex items-center justify-between border-b border-border bg-card px-3 sm:px-4 py-3">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
-            <AvatarFallback className="bg-primary/10 text-primary font-medium text-sm">
-              {conversation.contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            <AvatarFallback className={cn(
+              "font-medium text-sm",
+              conversation.isGroup ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"
+            )}>
+              {conversation.isGroup 
+                ? <Users className="h-4 w-4" />
+                : conversation.contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+              }
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{conversation.contact.name}</h3>
+            <div className="flex items-center gap-1.5">
+              {conversation.isGroup && <Users className="h-3.5 w-3.5 text-accent shrink-0" />}
+              <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{conversation.contact.name}</h3>
+            </div>
             <div className="flex items-center gap-2">
               {conversation.contact.status === 'online' ? (
                 <span className="flex items-center gap-1 text-xs text-success">
@@ -311,6 +324,7 @@ export function ChatWindow({ conversation, onSendMessage, onServiceCompleted, ca
                 key={msg.id} 
                 message={msg} 
                 metadata={(msg as Message & { metadata?: Record<string, unknown> }).metadata}
+                isGroup={conversation.isGroup}
               />
             ))}
             

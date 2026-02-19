@@ -26,6 +26,7 @@ export interface WhatsAppConversation {
   ai_enabled: boolean | null;
   read_status: string | null;
   last_seen: string | null;
+  is_group: boolean | null;
   created_at: string;
   updated_at: string;
 }

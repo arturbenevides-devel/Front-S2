@@ -218,6 +218,7 @@ export type Database = {
           contact_phone: string
           created_at: string
           id: string
+          is_group: boolean | null
           last_seen: string | null
           read_status: string | null
           status: string | null
@@ -234,6 +235,7 @@ export type Database = {
           contact_phone: string
           created_at?: string
           id?: string
+          is_group?: boolean | null
           last_seen?: string | null
           read_status?: string | null
           status?: string | null
@@ -250,6 +252,7 @@ export type Database = {
           contact_phone?: string
           created_at?: string
           id?: string
+          is_group?: boolean | null
           last_seen?: string | null
           read_status?: string | null
           status?: string | null
