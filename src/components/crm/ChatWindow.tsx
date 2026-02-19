@@ -118,7 +118,14 @@ function AudioMessageBubble({ message, metadata }: { message: Message; metadata?
 
 function MessageBubble({ message, metadata, isGroup }: { message: Message; metadata?: Record<string, unknown>; isGroup?: boolean }) {
   const isUser = message.sender === 'user';
-  const senderName = !isUser && isGroup ? (metadata?.senderName as string) : undefined;
+  // Try multiple metadata fields to find sender name in group chats
+  const senderName = !isUser && isGroup ? (
+    (metadata?.senderName as string) || 
+    (metadata?.senderContactName as string) ||
+    ((metadata?.quotedMessage as Record<string, unknown>)?.participant as string)?.replace('@c.us', '') ||
+    (metadata?.senderPhone as string)?.replace('@c.us', '') ||
+    undefined
+  ) : undefined;
 
   if (message.type === 'audio') {
     return <AudioMessageBubble message={message} metadata={metadata} />;
