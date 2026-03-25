@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const Login = () => {
   const [cnpj, setCnpj] = useState('');
@@ -20,9 +21,8 @@ const Login = () => {
       const cnpjDigits = cnpj.replace(/\D/g, '');
       await login(cnpjDigits, email, password);
       navigate('/');
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message || 'Credenciais inválidas. Tente novamente.';
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, 'Credenciais inválidas. Tente novamente.');
       toast({
         title: 'Erro ao entrar',
         description: message,
