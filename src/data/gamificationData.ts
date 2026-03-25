@@ -1,4 +1,29 @@
+import type { AuthUser } from '@/contexts/AuthContext';
 import { AgentStats, DailyChallenge, LeaderboardEntry, AGENT_LEVELS, AVAILABLE_BADGES } from '@/types/gamification';
+
+const emptyAgentStats = (id: string, name: string, avatar?: string): AgentStats => ({
+  id,
+  name,
+  avatar,
+  xp: 0,
+  level: AGENT_LEVELS[0],
+  streak: 0,
+  badges: [],
+  salesCount: 0,
+  conversationsToday: 0,
+  avgResponseTime: 0,
+  nps: 0,
+  weeklyXP: 0,
+  monthlyXP: 0,
+});
+
+/** Nome/foto do usuário autenticado; demais campos são placeholders até existir backend de gamificação. */
+export function buildGamificationAgentStats(user: AuthUser | null): AgentStats {
+  if (!user) {
+    return emptyAgentStats('guest', 'Convidado');
+  }
+  return emptyAgentStats(user.id, user.fullName, user.profileImage);
+}
 
 const getLevel = (xp: number) => {
   return AGENT_LEVELS.find(l => xp >= l.minXP && xp < l.maxXP) || AGENT_LEVELS[0];
@@ -7,7 +32,7 @@ const getLevel = (xp: number) => {
 export const mockAgentStats: AgentStats[] = [
   {
     id: 'agent-1',
-    name: 'Carlos Silva',
+    name: 'Agente (demo)',
     xp: 720,
     level: getLevel(720),
     streak: 12,
@@ -99,8 +124,6 @@ export const mockAgentStats: AgentStats[] = [
     monthlyXP: 480,
   },
 ];
-
-export const currentAgent = mockAgentStats[0];
 
 export const mockLeaderboard: LeaderboardEntry[] = mockAgentStats
   .sort((a, b) => b.xp - a.xp)

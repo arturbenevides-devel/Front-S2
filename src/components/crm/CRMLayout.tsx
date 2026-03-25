@@ -12,7 +12,8 @@ import { UnresponsedAlert } from './UnresponsedAlert';
 import { CampaignManagement } from './CampaignManagement';
 import { GamificationDashboard } from './gamification/GamificationDashboard';
 import { AgentProfile } from './gamification/AgentProfile';
-import { currentAgent } from '@/data/gamificationData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGamificationAgent } from '@/hooks/useGamificationAgent';
 import { Conversation, Message, CustomerTask, DismissedActivityReport, ConversationReadStatus } from '@/types/crm';
 import { mockAISuggestions, mockPackages } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
@@ -52,28 +53,6 @@ const initialTasks: CustomerTask[] = [
   },
 ];
 
-// Mock dismissed reports for demonstration
-const initialDismissedReports: DismissedActivityReport[] = [
-  {
-    id: 'dismiss-1',
-    conversationId: '3',
-    contactName: 'Pedro Almeida',
-    agentName: 'Carlos Silva',
-    dismissType: 'permanent',
-    dismissedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    conversationSummary: 'Cliente desistiu da viagem por motivos pessoais',
-  },
-  {
-    id: 'dismiss-2',
-    conversationId: '4',
-    contactName: 'Ana Costa',
-    agentName: 'Maria Santos',
-    dismissType: 'later',
-    dismissedAt: new Date(Date.now() - 1000 * 60 * 30),
-    conversationSummary: 'Aguardando retorno do cliente sobre datas',
-  },
-];
-
 // Map WhatsApp conversation from DB to CRM Conversation type
 const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
   const readStatus: ConversationReadStatus = 
@@ -106,6 +85,8 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 };
 
 export function CRMLayout() {
+  const { user } = useAuth();
+  const gamificationAgent = useGamificationAgent();
   const { canAccessCrmAdmin, canAccessCrmSupervision } = useAccessControl();
   const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
   const { enableAutopilot, disableAutopilot, isAutopilotActive } = useAutopilot();
@@ -135,7 +116,35 @@ export function CRMLayout() {
   const { messages: selectedConversationMessages } = useWhatsAppMessages(selectedConversation?.id);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [tasks, setTasks] = useState<CustomerTask[]>(initialTasks);
-  const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>(initialDismissedReports);
+
+  const seedDismissedReports = useMemo((): DismissedActivityReport[] => {
+    const agentName = user?.fullName?.trim() || '—';
+    return [
+      {
+        id: 'dismiss-1',
+        conversationId: '3',
+        contactName: 'Pedro Almeida',
+        agentName,
+        dismissType: 'permanent',
+        dismissedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        conversationSummary: 'Cliente desistiu da viagem por motivos pessoais',
+      },
+      {
+        id: 'dismiss-2',
+        conversationId: '4',
+        contactName: 'Ana Costa',
+        agentName: 'Equipe',
+        dismissType: 'later',
+        dismissedAt: new Date(Date.now() - 1000 * 60 * 30),
+        conversationSummary: 'Aguardando retorno do cliente sobre datas',
+      },
+    ];
+  }, [user?.fullName]);
+
+  const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>([]);
+  useEffect(() => {
+    setDismissedReports((prev) => (prev.length === 0 ? seedDismissedReports : prev));
+  }, [seedDismissedReports]);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [pendingConversationChange, setPendingConversationChange] = useState<Conversation | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('list');
@@ -520,7 +529,7 @@ export function CRMLayout() {
           {/* Agent Profile Mini */}
           {gamificationEnabled && (
             <div className="px-3 pb-3">
-              <AgentProfile agent={currentAgent} compact />
+              <AgentProfile agent={gamificationAgent} compact />
             </div>
           )}
           <div className="flex-1 overflow-hidden">
@@ -862,6 +871,7 @@ export function CRMLayout() {
         onRequestHelp={handleRequestSupervisorHelp}
         onNavigate={handleNavigateToTask}
         isSupervisor={viewMode === 'supervision'}
+        currentUserFullName={user?.fullName}
       />
     </div>
   );
