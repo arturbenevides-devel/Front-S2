@@ -441,7 +441,7 @@ export default function GovernancaPerfis() {
     mutationFn: (id: string) => api.delete(`/profiles/${id}`),
     onSuccess: () => {
       invalidate();
-      toast({ title: 'Perfil removido (desativado).' });
+      toast({ title: 'Perfil excluído permanentemente.' });
     },
     onError: (err) =>
       toast({
@@ -487,7 +487,9 @@ export default function GovernancaPerfis() {
         <div>
           <h1 className="text-lg font-semibold mb-1">Perfis de acesso</h1>
           <p className="text-sm text-muted-foreground">
-            Perfis do tenant. O perfil padrão tem acesso total e não respeita a matriz de permissões.
+            Perfis do tenant. O perfil padrão tem acesso total e não respeita a matriz de permissões. Use o
+            interruptor para ativar ou desativar; a lixeira remove o perfil do banco (somente se não houver
+            usuários vinculados).
           </p>
         </div>
         <CreateDialog onCreated={invalidate} />
@@ -561,18 +563,17 @@ export default function GovernancaPerfis() {
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              title="Remover"
+                              title="Excluir permanentemente"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Remover perfil "{p.name}"?</AlertDialogTitle>
+                              <AlertDialogTitle>Excluir perfil "{p.name}" permanentemente?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                O perfil será desativado (soft delete). Usuários vinculados
-                                manterão o vínculo, mas o perfil não estará mais disponível para novos
-                                usuários.
+                                Esta ação apaga o perfil e suas permissões no banco de dados. Não é possível
+                                excluir se ainda existir usuário usando este perfil — reatribua-os antes.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -581,7 +582,7 @@ export default function GovernancaPerfis() {
                                 className="bg-destructive hover:bg-destructive/90"
                                 onClick={() => deleteMutation.mutate(p.id)}
                               >
-                                Remover
+                                Excluir permanentemente
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

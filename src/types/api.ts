@@ -26,6 +26,14 @@ export interface CreateUserRequest {
   profileImage?: string;
 }
 
+export interface UpdateUserRequest {
+  email?: string;
+  fullName?: string;
+  profileId?: string;
+  companyId?: string;
+  profileImage?: string;
+}
+
 export interface UserListItemDto {
   id: string;
   email: string;

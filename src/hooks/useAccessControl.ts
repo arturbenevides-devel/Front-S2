@@ -37,16 +37,29 @@ export function useAccessControl() {
 
   const menusReady = query.isFetched || query.isError;
 
-  /** Listagem/edição de usuários (alinhado ao menu /users do backend). */
-  const canManageUsers = isDefaultProfile || (menusReady && hasMenuAction('/users'));
+  const usersMenu = useMemo(
+    () => (query.data ?? []).find((m) => m.action === '/users'),
+    [query.data],
+  );
+  const usersPerms = usersMenu?.permissions;
 
-  /** Perfis de acesso (menu /profiles). */
+  const canManageUsers =
+    isDefaultProfile || (menusReady && Boolean(usersPerms?.canFindAll ?? hasMenuAction('/users')));
+
+  const canCreateUsers = isDefaultProfile || (menusReady && Boolean(usersPerms?.canCreate));
+
+  const canUpdateUsers = isDefaultProfile || (menusReady && Boolean(usersPerms?.canUpdate));
+
+  const canChangeUserStatus =
+    isDefaultProfile ||
+    (menusReady && Boolean(usersPerms?.canUpdate || usersPerms?.canCreate));
+
+  const canDeleteUsers = isDefaultProfile || (menusReady && Boolean(usersPerms?.canDelete));
+
   const canManageProfiles = isDefaultProfile || (menusReady && hasMenuAction('/profiles'));
 
-  /** Painel Admin do CRM (integrações Green API etc.): apenas administrador do tenant. */
   const canAccessCrmAdmin = isDefaultProfile;
 
-  /** Supervisão operacional do CRM: apenas administrador do tenant. */
   const canAccessCrmSupervision = isDefaultProfile;
 
   const showUsersNav =
@@ -61,6 +74,10 @@ export function useAccessControl() {
     isDefaultProfile,
     hasMenuAction,
     canManageUsers,
+    canCreateUsers,
+    canUpdateUsers,
+    canChangeUserStatus,
+    canDeleteUsers,
     canManageProfiles,
     showUsersNav,
     showProfilesNav,
