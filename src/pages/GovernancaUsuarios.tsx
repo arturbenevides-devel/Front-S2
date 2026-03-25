@@ -106,8 +106,7 @@ export default function GovernancaUsuarios() {
       setCompanyId('');
       toast({
         title: 'Usuário criado',
-        description:
-          'O cadastro foi enviado. Se não informou senha, o convite segue por e-mail (confirmação no back-S2).',
+        description: 'O cadastro foi enviado. O usuário receberá o e-mail para ativar a conta, se o envio estiver configurado.',
       });
     },
     onError: (err: unknown) => {
@@ -191,10 +190,19 @@ export default function GovernancaUsuarios() {
       toast({ title: 'Perfil obrigatório', description: 'Selecione um perfil de acesso.', variant: 'destructive' });
       return;
     }
-    if (password.length > 0 && password.length < 6) {
+    const trimmedPassword = password.trim();
+    if (!trimmedPassword) {
+      toast({
+        title: 'Senha obrigatória',
+        description: 'Informe uma senha com pelo menos 6 caracteres para o novo usuário.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (trimmedPassword.length < 6) {
       toast({
         title: 'Senha inválida',
-        description: 'A senha deve ter pelo menos 6 caracteres ou ficar em branco para convite por e-mail.',
+        description: 'A senha deve ter pelo menos 6 caracteres.',
         variant: 'destructive',
       });
       return;
@@ -203,7 +211,7 @@ export default function GovernancaUsuarios() {
       email: trimmedEmail,
       fullName: trimmedName,
       profileId,
-      ...(password.length >= 6 ? { password } : {}),
+      password: trimmedPassword,
       ...(companyId ? { companyId } : {}),
     };
     createMutation.mutate(body);
@@ -322,16 +330,21 @@ export default function GovernancaUsuarios() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gu-password">Senha (opcional)</Label>
+                  <Label htmlFor="gu-password">
+                    Senha <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="gu-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mín. 6 caracteres; vazio = convite por e-mail"
+                    placeholder="Mínimo 6 caracteres"
                     autoComplete="new-password"
-                    minLength={0}
+                    minLength={6}
+                    required
+                    aria-required
                   />
+                  <p className="text-xs text-muted-foreground">Obrigatória. O usuário poderá alterá-la ao ativar o convite.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Perfil</Label>
@@ -367,7 +380,11 @@ export default function GovernancaUsuarios() {
                     </Select>
                   </div>
                 ) : null}
-                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={createMutation.isPending || password.trim().length < 6}
+                >
                   {createMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />

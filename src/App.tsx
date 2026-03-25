@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { CRMLayout } from "@/components/crm/CRMLayout";
@@ -12,6 +12,14 @@ import GovernancaUsuarios from "./pages/GovernancaUsuarios";
 import GovernancaPerfis from "./pages/GovernancaPerfis";
 import GovernancaEmpresa from "./pages/GovernancaEmpresa";
 import GovernancaAuditoria from "./pages/GovernancaAuditoria";
+import ActivateAccount from "./pages/ActivateAccount";
+
+function LegacyNewPasswordRedirect() {
+  const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const q = searchParams.toString();
+  return <Navigate to={q ? `/activate/${token}?${q}` : `/activate/${token!}`} replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -85,6 +93,15 @@ const App = () => (
                 </PublicRoute>
               }
             />
+            <Route
+              path="/activate/:token"
+              element={
+                <PublicRoute>
+                  <ActivateAccount />
+                </PublicRoute>
+              }
+            />
+            <Route path="/new-password/:token" element={<LegacyNewPasswordRedirect />} />
             <Route
               path="/"
               element={

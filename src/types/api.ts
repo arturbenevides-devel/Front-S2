@@ -1,3 +1,9 @@
+export interface ValidateResetTokenResponse {
+  userId: string;
+  email: string;
+  firstAccess: boolean;
+}
+
 export interface AuthorizedMenuDto {
   id: string;
   action: string;
