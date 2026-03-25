@@ -4,7 +4,8 @@ import { Leaderboard } from './Leaderboard';
 import { BadgesDisplay } from './BadgesDisplay';
 import { DailyChallenges } from './DailyChallenges';
 import { useAchievementToast } from './AchievementToast';
-import { currentAgent, mockLeaderboard, mockDailyChallenges } from '@/data/gamificationData';
+import { mockLeaderboard, mockDailyChallenges } from '@/data/gamificationData';
+import { useGamificationAgent } from '@/hooks/useGamificationAgent';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import {
 
 export function GamificationDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const currentAgent = useGamificationAgent();
   const { showXPGain, showLevelUp, showStreakMilestone } = useAchievementToast();
 
   // Demo function to show notifications

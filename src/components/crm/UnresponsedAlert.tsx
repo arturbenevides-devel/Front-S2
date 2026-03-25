@@ -33,18 +33,15 @@ interface UnresponsedAlertProps {
   onRequestHelp: (conversationId: string) => void;
   onNavigate: (conversationId: string) => void;
   isSupervisor?: boolean;
+  currentUserFullName?: string;
 }
 
-// Simulated agent assignments for demo
-const agentAssignments: Record<string, string> = {
-  '1': 'Carlos Silva',
-  '2': 'Maria Santos',
-  '3': 'João Pereira',
-  '4': 'Ana Costa',
-  '5': 'Pedro Almeida',
-  '6': 'Fernanda Lima',
-  'sdr-1': 'IA Automática',
-};
+function resolveAgentLabel(conv: Conversation, currentUserFullName?: string): string {
+  if (conv.id === 'sdr-1') return 'IA Automática';
+  if (conv.assignedTo) return conv.assignedTo;
+  if (currentUserFullName?.trim()) return currentUserFullName.trim();
+  return 'Não atribuído';
+}
 
 export function UnresponsedAlert({
   conversations,
@@ -53,6 +50,7 @@ export function UnresponsedAlert({
   onRequestHelp,
   onNavigate,
   isSupervisor = false,
+  currentUserFullName,
 }: UnresponsedAlertProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
@@ -73,7 +71,7 @@ export function UnresponsedAlert({
       .map((conv) => ({
         conversation: conv,
         waitingMinutes: Math.floor(Math.random() * 120) + 60, // Simulated waiting time
-        agentName: agentAssignments[conv.id] || 'Não atribuído',
+        agentName: resolveAgentLabel(conv, currentUserFullName),
       }));
   };
 

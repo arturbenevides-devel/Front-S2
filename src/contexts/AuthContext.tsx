@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
+import { getTenantSchemaFromAccessToken } from '@/lib/jwtTenantSchema';
 
 export interface AuthUser {
   id: string;
@@ -8,16 +9,46 @@ export interface AuthUser {
   profileImage?: string;
   profileId: string;
   companyId?: string;
+  profileName?: string;
+  profileIsDefault?: boolean;
   profile?: {
     id: string;
     name: string;
     description: string;
+    isDefault?: boolean;
+  };
+}
+
+interface LoginResponseUser {
+  id: string;
+  email: string;
+  fullName: string;
+  profileId: string;
+  profileName: string;
+  profileIsDefault?: boolean;
+}
+
+function mapLoginUser(u: LoginResponseUser): AuthUser {
+  return {
+    id: u.id,
+    email: u.email,
+    fullName: u.fullName,
+    profileId: u.profileId,
+    profileName: u.profileName,
+    profileIsDefault: u.profileIsDefault,
+    profile: {
+      id: u.profileId,
+      name: u.profileName,
+      description: '',
+      isDefault: u.profileIsDefault,
+    },
   };
 }
 
 interface AuthContextData {
   user: AuthUser | null;
   token: string | null;
+  tenantCnpj: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (cnpj: string, email: string, password: string) => Promise<void>;
@@ -25,23 +56,51 @@ interface AuthContextData {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+const AuthContext = createContext<AuthContextData | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    try {
+      const raw = localStorage.getItem('auth_user');
+      if (!raw) return null;
+      return JSON.parse(raw) as AuthUser;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth_token'));
+  const [tenantCnpj, setTenantCnpj] = useState<string | null>(() => {
+    const ls = localStorage.getItem('tenant_cnpj');
+    if (ls) {
+      const d = ls.replace(/\D/g, '');
+      if (d.length === 14) return d;
+    }
+    return getTenantSchemaFromAccessToken(localStorage.getItem('auth_token'));
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const loadProfile = useCallback(async () => {
     try {
-      const { data } = await api.get('/users/my-profile');
-      setUser(data);
+      const { data } = await api.get<AuthUser>('/users/my-profile');
+      const merged: AuthUser = {
+        ...data,
+        profileName: data.profile?.name ?? data.profileName,
+        profileIsDefault: data.profile?.isDefault ?? data.profileIsDefault,
+      };
+      setUser(merged);
+      localStorage.setItem('auth_user', JSON.stringify(merged));
+      const fromJwt = getTenantSchemaFromAccessToken(localStorage.getItem('auth_token'));
+      if (fromJwt && localStorage.getItem('tenant_cnpj') !== fromJwt) {
+        localStorage.setItem('tenant_cnpj', fromJwt);
+        setTenantCnpj(fromJwt);
+      }
     } catch {
-      // Token invalid — clear state
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
+      localStorage.removeItem('tenant_cnpj');
       setToken(null);
       setUser(null);
+      setTenantCnpj(null);
     }
   }, []);
 
@@ -55,19 +114,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token, loadProfile]);
 
   const login = async (cnpj: string, email: string, password: string) => {
-    const { data } = await api.post('/auth/login', { cnpj, email, password });
+    const { data } = await api.post<{
+      accessToken: string;
+      user?: LoginResponseUser;
+    }>('/auth/login', { cnpj, email, password });
 
     const jwt = data.accessToken;
     if (!jwt) throw new Error('Token não retornado pelo servidor');
 
+    const digits = cnpj.replace(/\D/g, '');
     localStorage.setItem('auth_token', jwt);
+    localStorage.setItem('tenant_cnpj', digits);
     setToken(jwt);
+    setTenantCnpj(digits);
 
     if (data.user) {
-      setUser(data.user);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      const mapped = mapLoginUser(data.user);
+      setUser(mapped);
+      localStorage.setItem('auth_user', JSON.stringify(mapped));
+      await loadProfile();
     } else {
-      // Fetch profile separately
       await loadProfile();
     }
   };
@@ -75,8 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('tenant_cnpj');
     setToken(null);
     setUser(null);
+    setTenantCnpj(null);
     window.location.href = '/login';
   };
 
@@ -89,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         token,
+        tenantCnpj,
         isAuthenticated: !!token && !!user,
         isLoading,
         login,
@@ -103,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

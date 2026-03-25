@@ -12,13 +12,15 @@ import { UnresponsedAlert } from './UnresponsedAlert';
 import { CampaignManagement } from './CampaignManagement';
 import { GamificationDashboard } from './gamification/GamificationDashboard';
 import { AgentProfile } from './gamification/AgentProfile';
-import { currentAgent } from '@/data/gamificationData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGamificationAgent } from '@/hooks/useGamificationAgent';
 import { Conversation, Message, CustomerTask, DismissedActivityReport, ConversationReadStatus } from '@/types/crm';
 import { mockAISuggestions, mockPackages } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useWhatsAppMessages, WhatsAppConversation } from '@/hooks/useWhatsAppMessages';
 import { useAutopilot } from '@/hooks/useAutopilot';
+import { useAccessControl } from '@/hooks/useAccessControl';
 import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -48,28 +50,6 @@ const initialTasks: CustomerTask[] = [
     scheduledDate: new Date(Date.now() - 1000 * 60 * 2),
     createdAt: new Date(Date.now() - 1000 * 60 * 30),
     completed: false,
-  },
-];
-
-// Mock dismissed reports for demonstration
-const initialDismissedReports: DismissedActivityReport[] = [
-  {
-    id: 'dismiss-1',
-    conversationId: '3',
-    contactName: 'Pedro Almeida',
-    agentName: 'Carlos Silva',
-    dismissType: 'permanent',
-    dismissedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    conversationSummary: 'Cliente desistiu da viagem por motivos pessoais',
-  },
-  {
-    id: 'dismiss-2',
-    conversationId: '4',
-    contactName: 'Ana Costa',
-    agentName: 'Maria Santos',
-    dismissType: 'later',
-    dismissedAt: new Date(Date.now() - 1000 * 60 * 30),
-    conversationSummary: 'Aguardando retorno do cliente sobre datas',
   },
 ];
 
@@ -105,6 +85,9 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 };
 
 export function CRMLayout() {
+  const { user } = useAuth();
+  const gamificationAgent = useGamificationAgent();
+  const { canAccessCrmAdmin, canAccessCrmSupervision } = useAccessControl();
   const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
   const { enableAutopilot, disableAutopilot, isAutopilotActive } = useAutopilot();
   // Local state for conversation overrides (until DB update propagates)
@@ -133,7 +116,35 @@ export function CRMLayout() {
   const { messages: selectedConversationMessages } = useWhatsAppMessages(selectedConversation?.id);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [tasks, setTasks] = useState<CustomerTask[]>(initialTasks);
-  const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>(initialDismissedReports);
+
+  const seedDismissedReports = useMemo((): DismissedActivityReport[] => {
+    const agentName = user?.fullName?.trim() || '—';
+    return [
+      {
+        id: 'dismiss-1',
+        conversationId: '3',
+        contactName: 'Pedro Almeida',
+        agentName,
+        dismissType: 'permanent',
+        dismissedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        conversationSummary: 'Cliente desistiu da viagem por motivos pessoais',
+      },
+      {
+        id: 'dismiss-2',
+        conversationId: '4',
+        contactName: 'Ana Costa',
+        agentName: 'Equipe',
+        dismissType: 'later',
+        dismissedAt: new Date(Date.now() - 1000 * 60 * 30),
+        conversationSummary: 'Aguardando retorno do cliente sobre datas',
+      },
+    ];
+  }, [user?.fullName]);
+
+  const [dismissedReports, setDismissedReports] = useState<DismissedActivityReport[]>([]);
+  useEffect(() => {
+    setDismissedReports((prev) => (prev.length === 0 ? seedDismissedReports : prev));
+  }, [seedDismissedReports]);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [pendingConversationChange, setPendingConversationChange] = useState<Conversation | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('list');
@@ -149,6 +160,11 @@ export function CRMLayout() {
   const [newLeadAlert, setNewLeadAlert] = useState(false);
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [completedServiceConversations, setCompletedServiceConversations] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (viewMode === 'admin' && !canAccessCrmAdmin) setViewMode('chat');
+    if (viewMode === 'supervision' && !canAccessCrmSupervision) setViewMode('chat');
+  }, [viewMode, canAccessCrmAdmin, canAccessCrmSupervision]);
 
   // Count pending conversations
   const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
@@ -467,24 +483,28 @@ export function CRMLayout() {
               <BarChart3 className="w-4 h-4" />
               Métricas
             </Button>
-            <Button
-              variant={viewMode === 'admin' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('admin')}
-              className="flex-1 gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Admin
-            </Button>
-            <Button
-              variant={viewMode === 'supervision' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('supervision')}
-              className="flex-1 gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              Supervisão
-            </Button>
+            {canAccessCrmAdmin && (
+              <Button
+                variant={viewMode === 'admin' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('admin')}
+                className="flex-1 gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Admin
+              </Button>
+            )}
+            {canAccessCrmSupervision && (
+              <Button
+                variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('supervision')}
+                className="flex-1 gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                Supervisão
+              </Button>
+            )}
             {gamificationEnabled && (
               <Button
                 variant={viewMode === 'gamification' ? 'default' : 'ghost'}
@@ -509,7 +529,7 @@ export function CRMLayout() {
           {/* Agent Profile Mini */}
           {gamificationEnabled && (
             <div className="px-3 pb-3">
-              <AgentProfile agent={currentAgent} compact />
+              <AgentProfile agent={gamificationAgent} compact />
             </div>
           )}
           <div className="flex-1 overflow-hidden">
@@ -663,22 +683,26 @@ export function CRMLayout() {
                       <BarChart3 className="w-5 h-5" />
                       Métricas
                     </Button>
-                    <Button
-                      variant={viewMode === 'admin' ? 'default' : 'ghost'}
-                      className="justify-start gap-3"
-                      onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
-                    >
-                      <Settings className="w-5 h-5" />
-                      Administração
-                    </Button>
-                    <Button
-                      variant={viewMode === 'supervision' ? 'default' : 'ghost'}
-                      className="justify-start gap-3"
-                      onClick={() => { setViewMode('supervision'); setShowMobileMenu(false); }}
-                    >
-                      <Eye className="w-5 h-5" />
-                      Supervisão
-                    </Button>
+                    {canAccessCrmAdmin && (
+                      <Button
+                        variant={viewMode === 'admin' ? 'default' : 'ghost'}
+                        className="justify-start gap-3"
+                        onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
+                      >
+                        <Settings className="w-5 h-5" />
+                        Administração
+                      </Button>
+                    )}
+                    {canAccessCrmSupervision && (
+                      <Button
+                        variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+                        className="justify-start gap-3"
+                        onClick={() => { setViewMode('supervision'); setShowMobileMenu(false); }}
+                      >
+                        <Eye className="w-5 h-5" />
+                        Supervisão
+                      </Button>
+                    )}
                     <Button
                       variant={viewMode === 'campaigns' ? 'default' : 'ghost'}
                       className="justify-start gap-3"
@@ -806,15 +830,17 @@ export function CRMLayout() {
               <BarChart3 className="w-5 h-5" />
               <span className="text-xs">Métricas</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'admin' ? 'text-primary' : 'text-muted-foreground'}`}
-              onClick={() => setViewMode('admin')}
-            >
-              <Settings className="w-5 h-5" />
-              <span className="text-xs">Admin</span>
-            </Button>
+            {canAccessCrmAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'admin' ? 'text-primary' : 'text-muted-foreground'}`}
+                onClick={() => setViewMode('admin')}
+              >
+                <Settings className="w-5 h-5" />
+                <span className="text-xs">Admin</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -845,6 +871,7 @@ export function CRMLayout() {
         onRequestHelp={handleRequestSupervisorHelp}
         onNavigate={handleNavigateToTask}
         isSupervisor={viewMode === 'supervision'}
+        currentUserFullName={user?.fullName}
       />
     </div>
   );

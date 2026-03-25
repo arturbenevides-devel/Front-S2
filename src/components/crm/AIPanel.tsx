@@ -92,16 +92,19 @@ export function AIPanel({
     
     // Simulate detecting image messages (in real app, check for image URLs or attachments)
     const imageKeywords = ['imagem', 'foto', 'documento', 'rg', 'cpf', 'passaporte', 'cnh', 'anexo', 'enviando'];
-    return conversation.messages.filter(msg => 
-      msg.sender === 'contact' && 
-      imageKeywords.some(keyword => msg.content.toLowerCase().includes(keyword))
-    );
+    return conversation.messages.filter((msg) => {
+      const text = (msg.content ?? '').toLowerCase();
+      return msg.sender === 'contact' && imageKeywords.some((keyword) => text.includes(keyword));
+    });
   }, [conversation]);
 
   // Mock AI analysis for pre-filling search
   const quoteAnalysis = conversation ? {
-    destination: conversation.lastMessage.includes('Cancún') ? 'Cancún' : 
-                 conversation.lastMessage.includes('Paris') ? 'Paris' : 'Rio de Janeiro',
+    destination: (conversation.lastMessage ?? '').includes('Cancún')
+      ? 'Cancún'
+      : (conversation.lastMessage ?? '').includes('Paris')
+        ? 'Paris'
+        : 'Rio de Janeiro',
     checkIn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     checkOut: new Date(Date.now() + 37 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     adults: 2,
