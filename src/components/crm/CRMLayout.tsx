@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useWhatsAppMessages, WhatsAppConversation } from '@/hooks/useWhatsAppMessages';
 import { useAutopilot } from '@/hooks/useAutopilot';
+import { useAccessControl } from '@/hooks/useAccessControl';
 import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -105,6 +106,7 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 };
 
 export function CRMLayout() {
+  const { canAccessCrmAdmin, canAccessCrmSupervision } = useAccessControl();
   const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
   const { enableAutopilot, disableAutopilot, isAutopilotActive } = useAutopilot();
   // Local state for conversation overrides (until DB update propagates)
@@ -149,6 +151,11 @@ export function CRMLayout() {
   const [newLeadAlert, setNewLeadAlert] = useState(false);
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [completedServiceConversations, setCompletedServiceConversations] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (viewMode === 'admin' && !canAccessCrmAdmin) setViewMode('chat');
+    if (viewMode === 'supervision' && !canAccessCrmSupervision) setViewMode('chat');
+  }, [viewMode, canAccessCrmAdmin, canAccessCrmSupervision]);
 
   // Count pending conversations
   const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
@@ -467,24 +474,28 @@ export function CRMLayout() {
               <BarChart3 className="w-4 h-4" />
               Métricas
             </Button>
-            <Button
-              variant={viewMode === 'admin' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('admin')}
-              className="flex-1 gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Admin
-            </Button>
-            <Button
-              variant={viewMode === 'supervision' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('supervision')}
-              className="flex-1 gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              Supervisão
-            </Button>
+            {canAccessCrmAdmin && (
+              <Button
+                variant={viewMode === 'admin' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('admin')}
+                className="flex-1 gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Admin
+              </Button>
+            )}
+            {canAccessCrmSupervision && (
+              <Button
+                variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('supervision')}
+                className="flex-1 gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                Supervisão
+              </Button>
+            )}
             {gamificationEnabled && (
               <Button
                 variant={viewMode === 'gamification' ? 'default' : 'ghost'}
@@ -663,22 +674,26 @@ export function CRMLayout() {
                       <BarChart3 className="w-5 h-5" />
                       Métricas
                     </Button>
-                    <Button
-                      variant={viewMode === 'admin' ? 'default' : 'ghost'}
-                      className="justify-start gap-3"
-                      onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
-                    >
-                      <Settings className="w-5 h-5" />
-                      Administração
-                    </Button>
-                    <Button
-                      variant={viewMode === 'supervision' ? 'default' : 'ghost'}
-                      className="justify-start gap-3"
-                      onClick={() => { setViewMode('supervision'); setShowMobileMenu(false); }}
-                    >
-                      <Eye className="w-5 h-5" />
-                      Supervisão
-                    </Button>
+                    {canAccessCrmAdmin && (
+                      <Button
+                        variant={viewMode === 'admin' ? 'default' : 'ghost'}
+                        className="justify-start gap-3"
+                        onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
+                      >
+                        <Settings className="w-5 h-5" />
+                        Administração
+                      </Button>
+                    )}
+                    {canAccessCrmSupervision && (
+                      <Button
+                        variant={viewMode === 'supervision' ? 'default' : 'ghost'}
+                        className="justify-start gap-3"
+                        onClick={() => { setViewMode('supervision'); setShowMobileMenu(false); }}
+                      >
+                        <Eye className="w-5 h-5" />
+                        Supervisão
+                      </Button>
+                    )}
                     <Button
                       variant={viewMode === 'campaigns' ? 'default' : 'ghost'}
                       className="justify-start gap-3"
@@ -806,15 +821,17 @@ export function CRMLayout() {
               <BarChart3 className="w-5 h-5" />
               <span className="text-xs">Métricas</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'admin' ? 'text-primary' : 'text-muted-foreground'}`}
-              onClick={() => setViewMode('admin')}
-            >
-              <Settings className="w-5 h-5" />
-              <span className="text-xs">Admin</span>
-            </Button>
+            {canAccessCrmAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`flex-col gap-1 h-auto py-2 px-3 ${viewMode === 'admin' ? 'text-primary' : 'text-muted-foreground'}`}
+                onClick={() => setViewMode('admin')}
+              >
+                <Settings className="w-5 h-5" />
+                <span className="text-xs">Admin</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
