@@ -53,9 +53,7 @@ export default function GovernancaAuditoria() {
       <div className="overflow-auto h-full p-4 md:p-6 max-w-2xl">
         <h1 className="text-lg font-semibold mb-1">Auditoria</h1>
         <p className="text-sm text-muted-foreground mb-4">
-          Nenhum endpoint de auditoria respondeu entre os caminhos conhecidos. Quando o backend publicar a rota, defina{' '}
-          <code className="text-xs bg-muted px-1 rounded">VITE_AUDIT_LOGS_PATH</code> no ambiente do front (ex.:{' '}
-          <code className="text-xs bg-muted px-1 rounded">audit/logs</code>) para apontar para o contrato correto.
+          Em desenvolvimento.
         </p>
       </div>
     );
