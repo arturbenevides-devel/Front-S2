@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+// supabase removed — internal notes mocked
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -63,34 +63,6 @@ export function InternalNotesPanel({ conversationId }: InternalNotesPanelProps) 
   // Load notes on mount and when conversation changes
   useEffect(() => {
     loadNotes();
-    
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel(`internal-notes-${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversation_internal_notes',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setNotes(prev => {
-              if (prev.some(n => n.id === (payload.new as InternalNote).id)) return prev;
-              return [...prev, payload.new as InternalNote];
-            });
-          } else if (payload.eventType === 'DELETE') {
-            setNotes(prev => prev.filter(n => n.id !== (payload.old as InternalNote).id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [conversationId]);
 
   // Save user preferences
@@ -107,14 +79,9 @@ export function InternalNotesPanel({ conversationId }: InternalNotesPanelProps) 
   const loadNotes = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('conversation_internal_notes')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setNotes(data || []);
+      // TODO: integrate with backend internal-notes endpoint
+      console.warn('[MOCK] loadNotes — not yet integrated');
+      setNotes([]);
     } catch (error) {
       console.error('Error loading notes:', error);
       toast.error('Erro ao carregar notas internas');
@@ -131,19 +98,10 @@ export function InternalNotesPanel({ conversationId }: InternalNotesPanelProps) 
 
     setSending(true);
     try {
-      const { error } = await supabase
-        .from('conversation_internal_notes')
-        .insert({
-          conversation_id: conversationId,
-          author_name: authorName.trim(),
-          author_department: department,
-          content: newNote.trim(),
-        });
-
-      if (error) throw error;
-      
+      // TODO: integrate with backend internal-notes endpoint
+      console.warn('[MOCK] handleSendNote — not yet integrated');
       setNewNote('');
-      toast.success('Nota adicionada com sucesso');
+      toast.success('Nota adicionada (mock)');
     } catch (error) {
       console.error('Error sending note:', error);
       toast.error('Erro ao adicionar nota');
@@ -154,13 +112,9 @@ export function InternalNotesPanel({ conversationId }: InternalNotesPanelProps) 
 
   const handleDeleteNote = async (noteId: string) => {
     try {
-      const { error } = await supabase
-        .from('conversation_internal_notes')
-        .delete()
-        .eq('id', noteId);
-
-      if (error) throw error;
-      toast.success('Nota removida');
+      // TODO: integrate with backend internal-notes endpoint
+      console.warn('[MOCK] handleDeleteNote — not yet integrated', noteId);
+      toast.success('Nota removida (mock)');
     } catch (error) {
       console.error('Error deleting note:', error);
       toast.error('Erro ao remover nota');

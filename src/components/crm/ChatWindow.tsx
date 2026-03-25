@@ -15,7 +15,7 @@ import { useConversationEvents, ConversationEvent } from '@/hooks/useConversatio
 import { ConversationEventItem } from './ConversationEventItem';
 import { EmojiPicker } from './EmojiPicker';
 import { AudioRecorder } from './AudioRecorder';
-import { supabase } from '@/integrations/supabase/client';
+// supabase removed — WhatsApp functions mocked
 import { useToast } from '@/hooks/use-toast';
 
 interface ChatWindowProps {
@@ -53,17 +53,10 @@ function AudioMessageBubble({ message, metadata }: { message: Message; metadata?
   const handleTranscribe = async () => {
     setTranscribing(true);
     try {
-      const body: Record<string, string> = {};
-      if (audioUrl) {
-        body.audioUrl = audioUrl;
-      }
-      
-      const { data, error } = await supabase.functions.invoke('transcribe-audio', { body });
-      if (error) throw error;
-      
-      if (data?.transcription) {
-        setTranscription(data.transcription);
-      }
+      // TODO: integrate with backend transcription endpoint
+      console.warn('[MOCK] transcribe-audio — not yet integrated');
+      toast({ title: 'Transcrição indisponível', description: 'Funcionalidade será integrada em breve.', variant: 'destructive' });
+      return;
     } catch (err) {
       console.error('Transcription error:', err);
       toast({ title: 'Erro na transcrição', variant: 'destructive' });
@@ -288,11 +281,9 @@ export function ChatWindow({ conversation, onSendMessage, onServiceCompleted, ca
 
     setSendingAudio(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-send-audio', {
-        body: { chatId, audioBase64, conversationId: conversation.id },
-      });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Falha ao enviar áudio');
+      // TODO: integrate with backend send-audio endpoint
+      console.warn('[MOCK] whatsapp-send-audio — not yet integrated');
+      throw new Error('Envio de áudio será integrado em breve');
       toast({ title: 'Áudio enviado!' });
     } catch (err) {
       console.error('Error sending audio:', err);

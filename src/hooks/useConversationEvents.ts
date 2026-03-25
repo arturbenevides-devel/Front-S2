@@ -1,18 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Json } from '@/integrations/supabase/types';
+import { useState, useCallback } from 'react';
 
 export interface ConversationEvent {
   id: string;
   conversation_id: string;
   event_type: string;
-  event_data: Json;
+  event_data: unknown;
   actor_name: string | null;
   actor_department: string | null;
   created_at: string;
 }
 
-export type EventType = 
+export type EventType =
   | 'agent_transfer'
   | 'tag_added'
   | 'tag_removed'
@@ -59,96 +57,26 @@ export const EVENT_ICONS: Record<EventType, string> = {
   custom: '📌',
 };
 
-export function useConversationEvents(conversationId: string | undefined) {
-  const [events, setEvents] = useState<ConversationEvent[]>([]);
-  const [loading, setLoading] = useState(false);
+/**
+ * Mock hook — Conversation Events will be implemented in a future phase.
+ */
+export function useConversationEvents(_conversationId: string | undefined) {
+  const [events] = useState<ConversationEvent[]>([]);
+  const [loading] = useState(false);
 
   const loadEvents = useCallback(async () => {
-    if (!conversationId) {
-      setEvents([]);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('conversation_events')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setEvents(data || []);
-    } catch (error) {
-      console.error('Error loading events:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [conversationId]);
-
-  // Load events on mount and when conversation changes
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  // Subscribe to realtime updates
-  useEffect(() => {
-    if (!conversationId) return;
-
-    const channel = supabase
-      .channel(`events-${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'conversation_events',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newEvent = payload.new as ConversationEvent;
-          setEvents(prev => [...prev, newEvent]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId]);
+    console.warn('[MOCK] loadEvents — not yet integrated');
+  }, []);
 
   const addEvent = useCallback(async (
-    eventType: EventType,
-    eventData: Record<string, unknown> = {},
-    actorName?: string,
-    actorDepartment?: string
+    _eventType: EventType,
+    _eventData: Record<string, unknown> = {},
+    _actorName?: string,
+    _actorDepartment?: string,
   ) => {
-    if (!conversationId) return null;
-
-    // Get actor info from localStorage if not provided
-    const name = actorName || localStorage.getItem('userName') || 'Sistema';
-    const department = actorDepartment || localStorage.getItem('userDepartment') || 'Sistema';
-
-    try {
-      const { data, error } = await supabase
-        .from('conversation_events')
-        .insert([{
-          conversation_id: conversationId,
-          event_type: eventType,
-          event_data: eventData as Json,
-          actor_name: name,
-          actor_department: department,
-        }])
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error adding event:', error);
-      return null;
-    }
-  }, [conversationId]);
+    console.warn('[MOCK] addEvent — not yet integrated');
+    return null;
+  }, []);
 
   return {
     events,

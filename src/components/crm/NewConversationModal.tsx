@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+// supabase removed — conversations mocked
 import { toast } from 'sonner';
 
 interface NewConversationModalProps {
@@ -63,40 +63,13 @@ export function NewConversationModal({
       const chatId = formatPhoneForWhatsApp(phone);
       const formattedPhone = formatPhoneDisplay(phone);
 
-      // Check if conversation already exists
-      const { data: existing } = await supabase
-        .from('whatsapp_conversations')
-        .select('id')
-        .eq('chat_id', chatId)
-        .single();
+      // TODO: integrate with backend WhatsApp conversations endpoint
+      console.warn('[MOCK] create conversation — not yet integrated', { chatId, formattedPhone, name });
 
-      if (existing) {
-        toast.info('Conversa já existe');
-        onConversationCreated?.(existing.id);
-        onOpenChange(false);
-        resetForm();
-        return;
-      }
-
-      // Create new conversation
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .insert({
-          chat_id: chatId,
-          contact_phone: formattedPhone,
-          contact_name: name.trim() || formattedPhone,
-          status: 'offline',
-          category: 'lead',
-          read_status: 'read',
-          ai_enabled: true,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success('Conversa criada com sucesso!');
-      onConversationCreated?.(data.id);
+      // Mock: generate a temporary ID
+      const mockId = crypto.randomUUID();
+      toast.success('Conversa criada (mockada)');
+      onConversationCreated?.(mockId);
       onOpenChange(false);
       resetForm();
     } catch (error) {

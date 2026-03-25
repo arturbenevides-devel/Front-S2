@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ConversationEvent, EventType, EVENT_LABELS } from '@/hooks/useConversationEvents';
-import { Json } from '@/integrations/supabase/types';
+
+type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 const EVENT_ICON_COMPONENTS: Record<EventType, React.ComponentType<{ className?: string }>> = {
   agent_transfer: ArrowRightLeft,

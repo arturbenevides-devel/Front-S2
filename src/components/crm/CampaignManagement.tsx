@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+// supabase removed — campaigns mocked
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -57,53 +57,20 @@ export function CampaignManagement() {
 
   const loadData = async () => {
     setLoading(true);
-    const [leadsRes, campaignsRes] = await Promise.all([
-      supabase.from('campaign_leads').select('*').order('created_at', { ascending: false }),
-      supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
-    ]);
-
-    if (leadsRes.data) setLeads(leadsRes.data as CampaignLead[]);
-    if (campaignsRes.data) {
-      // Get lead counts for each campaign
-      const campaignsWithCounts = await Promise.all(
-        (campaignsRes.data as Campaign[]).map(async (c) => {
-          const { count } = await supabase
-            .from('campaign_lead_assignments')
-            .select('*', { count: 'exact', head: true })
-            .eq('campaign_id', c.id);
-          return { ...c, lead_count: count || 0 };
-        })
-      );
-      setCampaigns(campaignsWithCounts);
-    }
+    // TODO: integrate with backend campaigns/leads endpoints
+    console.warn('[MOCK] loadData — campaigns not yet integrated');
+    setLeads([]);
+    setCampaigns([]);
     setLoading(false);
   };
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name) return;
 
-    const { data, error } = await supabase.from('campaigns').insert({
-      name: newCampaign.name,
-      description: newCampaign.description || null,
-      destination: newCampaign.destination || null,
-      interest: newCampaign.interest || null,
-      scheduled_date: newCampaign.scheduled_date || null,
-      status: 'draft',
-    }).select().single();
+    // TODO: integrate with backend campaigns endpoint
+    console.warn('[MOCK] handleCreateCampaign — not yet integrated', newCampaign, selectedLeads);
 
-    if (error) {
-      toast({ title: 'Erro', description: 'Falha ao criar campanha.', variant: 'destructive' });
-      return;
-    }
-
-    // Assign selected leads
-    if (selectedLeads.length > 0 && data) {
-      await supabase.from('campaign_lead_assignments').insert(
-        selectedLeads.map(leadId => ({ campaign_id: data.id, lead_id: leadId }))
-      );
-    }
-
-    toast({ title: 'Campanha criada!', description: `${selectedLeads.length} leads adicionados.` });
+    toast({ title: 'Campanha criada (mock)!', description: `${selectedLeads.length} leads selecionados.` });
     setShowCreateCampaign(false);
     setNewCampaign({ name: '', description: '', destination: '', interest: '', scheduled_date: '' });
     setSelectedLeads([]);
@@ -112,21 +79,15 @@ export function CampaignManagement() {
 
   const handleViewCampaign = async (campaign: Campaign) => {
     setShowCampaignDetail(campaign);
-    const { data } = await supabase
-      .from('campaign_lead_assignments')
-      .select('lead_id')
-      .eq('campaign_id', campaign.id);
-    
-    if (data) {
-      const leadIds = data.map(d => d.lead_id);
-      const matchedLeads = leads.filter(l => leadIds.includes(l.id));
-      setCampaignLeads(matchedLeads);
-    }
+    // TODO: integrate with backend
+    console.warn('[MOCK] handleViewCampaign — not yet integrated');
+    setCampaignLeads([]);
   };
 
   const handleDeleteCampaign = async (campaignId: string) => {
-    await supabase.from('campaigns').delete().eq('id', campaignId);
-    toast({ title: 'Campanha removida' });
+    // TODO: integrate with backend
+    console.warn('[MOCK] handleDeleteCampaign — not yet integrated', campaignId);
+    toast({ title: 'Campanha removida (mock)' });
     setShowCampaignDetail(null);
     loadData();
   };

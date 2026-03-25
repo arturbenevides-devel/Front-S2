@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, MapPin, Plane, Calendar, Heart, Sparkles, X } from 'lucide-react';
 import { Conversation } from '@/types/crm';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+// supabase removed — campaign_leads mocked
 
 interface CompleteServiceModalProps {
   open: boolean;
@@ -121,22 +121,13 @@ export function CompleteServiceModal({
   const handleSave = async () => {
     setIsSaving(true);
     
-    // Save to campaign_leads table in database
-    const { error } = await supabase.from('campaign_leads').insert({
-      conversation_id: conversation?.id || '',
-      contact_name: conversation?.contact.name || 'Desconhecido',
-      contact_phone: conversation?.contact.phone || null,
-      origin: origin || null,
+    // TODO: integrate with backend campaigns endpoint
+    console.warn('[MOCK] campaign_leads insert — not yet integrated', {
+      conversation_id: conversation?.id,
+      contact_name: conversation?.contact.name,
       destination,
-      interest: interest || null,
-      travel_date: travelDate || null,
-      additional_interests: additionalInterests,
-      notes: notes || null,
+      interest,
     });
-    
-    if (error) {
-      console.error('Error saving campaign lead:', error);
-    }
     
     setIsSaving(false);
     setSaved(true);

@@ -1,6 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useCallback } from 'react';
 
 export interface AIMessage {
   role: 'user' | 'assistant';
@@ -13,114 +11,37 @@ interface ConversationContext {
   recentMessages?: { sender: string; content: string }[];
 }
 
-interface AISettings {
-  systemPrompt?: string;
-  autopilotPrompt?: string;
-  suggestionPrompt?: string;
-  analysisPrompt?: string;
-  knowledgeBase?: string[];
-  companyInfo?: string;
-  productsInfo?: string;
-  faqInfo?: string;
-}
-
+/**
+ * Mock hook — AI Assistant will be implemented in a future phase.
+ */
 export function useAIAssistant() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiSettings, setAISettings] = useState<AISettings | null>(null);
-  const { toast } = useToast();
-
-  // Load AI settings from localStorage on mount
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('ai_settings');
-    if (savedSettings) {
-      try {
-        setAISettings(JSON.parse(savedSettings));
-      } catch (e) {
-        console.error('Failed to parse AI settings:', e);
-      }
-    }
-  }, []);
+  const [isLoading] = useState(false);
+  const [aiSettings] = useState(null);
 
   const sendMessage = useCallback(async (
-    messages: AIMessage[],
-    conversationContext?: ConversationContext,
-    type: 'chat' | 'suggest' | 'analyze' | 'autopilot' = 'chat'
+    _messages: AIMessage[],
+    _conversationContext?: ConversationContext,
+    _type: 'chat' | 'suggest' | 'analyze' | 'autopilot' = 'chat'
   ): Promise<string | null> => {
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: {
-          messages,
-          conversationContext,
-          type,
-          aiSettings, // Pass custom AI settings
-        },
-      });
-
-      if (error) {
-        console.error('AI Assistant error:', error);
-        toast({
-          title: 'Erro na IA',
-          description: error.message || 'Não foi possível processar a solicitação.',
-          variant: 'destructive',
-        });
-        return null;
-      }
-
-      if (data.error) {
-        toast({
-          title: 'Erro na IA',
-          description: data.error,
-          variant: 'destructive',
-        });
-        return null;
-      }
-
-      return data.content;
-    } catch (err) {
-      console.error('AI Assistant exception:', err);
-      toast({
-        title: 'Erro na IA',
-        description: 'Falha ao conectar com o assistente.',
-        variant: 'destructive',
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast, aiSettings]);
+    console.warn('[MOCK] AI sendMessage — not yet integrated');
+    return null;
+  }, []);
 
   const generateSuggestions = useCallback(async (
-    conversationContext: ConversationContext
+    _conversationContext: ConversationContext
   ): Promise<string | null> => {
-    return sendMessage(
-      [{ role: 'user', content: 'Gere sugestões de respostas para o cliente baseado no contexto.' }],
-      conversationContext,
-      'suggest'
-    );
-  }, [sendMessage]);
+    console.warn('[MOCK] AI generateSuggestions — not yet integrated');
+    return null;
+  }, []);
 
   const analyzeConversation = useCallback(async (
-    conversationContext: ConversationContext
+    _conversationContext: ConversationContext
   ): Promise<string | null> => {
-    return sendMessage(
-      [{ role: 'user', content: 'Analise o perfil deste cliente e recomende próximos passos.' }],
-      conversationContext,
-      'analyze'
-    );
-  }, [sendMessage]);
-
-  const refreshSettings = useCallback(() => {
-    const savedSettings = localStorage.getItem('ai_settings');
-    if (savedSettings) {
-      try {
-        setAISettings(JSON.parse(savedSettings));
-      } catch (e) {
-        console.error('Failed to parse AI settings:', e);
-      }
-    }
+    console.warn('[MOCK] AI analyzeConversation — not yet integrated');
+    return null;
   }, []);
+
+  const refreshSettings = useCallback(() => {}, []);
 
   return {
     sendMessage,
