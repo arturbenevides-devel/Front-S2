@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy, Smartphone, Link, CheckCircle, XCircle, Loader2, Brain, BookOpen, Plus, Save } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users, UserPlus, ArrowLeftRight, Settings, Shield, Activity, Bot, MessageSquare, Trash2, Edit, FileText, Palette, Upload, Building2, Phone, Mail, Globe, Gamepad2, Trophy, Smartphone, Link, CheckCircle, XCircle, Loader2, Brain, BookOpen, Plus, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,16 +14,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { useAccessControl } from '@/hooks/useAccessControl';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
+import type { UserListItemDto, ProfileListItemDto, CreateUserRequest } from '@/types/api';
 
-interface Agent {
+interface TeamMember {
+  id: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+}
+
+interface TeamResponse {
   id: string;
   name: string;
-  email: string;
-  role: 'admin' | 'agent' | 'supervisor';
-  status: 'online' | 'offline' | 'busy';
-  activeConversations: number;
-  totalSales: number;
+  supervisorId: string | null;
+  supervisorName: string | null;
+  createdIn: string;
+  isActive: boolean;
+  updatedIn: string | null;
+  members: TeamMember[];
 }
 
 interface TransferRequest {
@@ -32,20 +46,6 @@ interface TransferRequest {
   customer: string;
   reason: string;
   timestamp: Date;
-}
-
-interface AgencySettings {
-  name: string;
-  cnpj: string;
-  phone: string;
-  email: string;
-  website: string;
-  address: string;
-  logo: string;
-  primaryColor: string;
-  secondaryColor: string;
-  footerText: string;
-  termsText: string;
 }
 
 interface WhatsAppConnection {
@@ -66,27 +66,6 @@ interface AISettings {
   faqInfo: string;
 }
 
-const defaultAgencySettings: AgencySettings = {
-  name: 'Viagens Incríveis',
-  cnpj: '12.345.678/0001-90',
-  phone: '(11) 99999-9999',
-  email: 'contato@viagensincriveis.com.br',
-  website: 'www.viagensincriveis.com.br',
-  address: 'Av. Paulista, 1000 - São Paulo, SP',
-  logo: '',
-  primaryColor: '#3b82f6',
-  secondaryColor: '#1e40af',
-  footerText: 'Orçamento válido por 7 dias. Sujeito a disponibilidade.',
-  termsText: 'Consulte condições de pagamento e cancelamento.',
-};
-
-const mockAgents: Agent[] = [
-  { id: '1', name: 'Ana Paula', email: 'ana@agencia.com', role: 'supervisor', status: 'online', activeConversations: 5, totalSales: 45600 },
-  { id: '2', name: 'Carlos Silva', email: 'carlos@agencia.com', role: 'agent', status: 'online', activeConversations: 8, totalSales: 32400 },
-  { id: '3', name: 'Maria Santos', email: 'maria@agencia.com', role: 'agent', status: 'busy', activeConversations: 10, totalSales: 28900 },
-  { id: '4', name: 'João Pedro', email: 'joao@agencia.com', role: 'agent', status: 'offline', activeConversations: 0, totalSales: 19500 },
-];
-
 const mockTransfers: TransferRequest[] = [
   { id: '1', from: 'IA SDR', to: 'Ana Paula', customer: 'Roberto Lima', reason: 'Lead qualificado', timestamp: new Date() },
   { id: '2', from: 'Carlos Silva', to: 'Maria Santos', customer: 'Juliana Costa', reason: 'Especialista em cruzeiros', timestamp: new Date(Date.now() - 3600000) },
@@ -99,13 +78,213 @@ interface AdminPanelProps {
 
 export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }: AdminPanelProps) {
   const { toast } = useToast();
-  const [agents, setAgents] = useState<Agent[]>(mockAgents);
+  const { user } = useAuth();
+  const { canCreateTeams, canUpdateTeams, canDeleteTeams, canCreateUsers, isDefaultProfile } = useAccessControl();
+  const queryClient = useQueryClient();
   const [transfers] = useState<TransferRequest[]>(mockTransfers);
   const [sdrEnabled, setSdrEnabled] = useState(true);
   const [catalogEnabled, setCatalogEnabled] = useState(true);
-  const [showAddAgent, setShowAddAgent] = useState(false);
-  const [newAgent, setNewAgent] = useState<{ name: string; email: string; role: 'admin' | 'agent' | 'supervisor' }>({ name: '', email: '', role: 'agent' });
-  const [agencySettings, setAgencySettings] = useState<AgencySettings>(defaultAgencySettings);
+  // ── Company / Branding ──
+  const companyQuery = useQuery({
+    queryKey: ['company-branding'],
+    queryFn: async () => {
+      const { data } = await api.get<import('@/types/api').CompanyDto[]>('/companies');
+      return data[0] ?? null;
+    },
+  });
+
+  const [agencySettings, setAgencySettings] = useState({
+    name: '', cnpj: '', phone: '', email: '', website: '', address: '',
+    logo: '', primaryColor: '#3b82f6', secondaryColor: '#1e40af',
+    footerText: '', termsText: '',
+  });
+  const [brandingLoaded, setBrandingLoaded] = useState(false);
+
+  // Sync company data into local state once loaded
+  const companyData = companyQuery.data;
+  if (companyData && !brandingLoaded) {
+    setAgencySettings({
+      name: companyData.name || '',
+      cnpj: companyData.federalRegistration || '',
+      phone: companyData.phone || '',
+      email: companyData.email || '',
+      website: companyData.website || '',
+      address: companyData.address || '',
+      logo: companyData.logo || '',
+      primaryColor: companyData.primaryColor || '#3b82f6',
+      secondaryColor: companyData.secondaryColor || '#1e40af',
+      footerText: companyData.footerText || '',
+      termsText: companyData.termsText || '',
+    });
+    setBrandingLoaded(true);
+  }
+
+  const saveBrandingMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyData) return;
+      await api.put(`/companies/${companyData.id}`, {
+        name: agencySettings.name,
+        federalRegistration: agencySettings.cnpj,
+        phone: agencySettings.phone,
+        email: agencySettings.email,
+        website: agencySettings.website,
+        address: agencySettings.address,
+        logo: agencySettings.logo,
+        primaryColor: agencySettings.primaryColor,
+        secondaryColor: agencySettings.secondaryColor,
+        footerText: agencySettings.footerText,
+        termsText: agencySettings.termsText,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-branding'] });
+      toast({ title: 'Configurações salvas com sucesso' });
+    },
+    onError: () => toast({ title: 'Erro ao salvar configurações', variant: 'destructive' }),
+  });
+
+  // ── Teams API ──
+  const teamsQuery = useQuery({
+    queryKey: ['teams'],
+    queryFn: async () => {
+      const { data } = await api.get<TeamResponse[]>('/teams');
+      return data;
+    },
+  });
+
+  const usersQuery = useQuery({
+    queryKey: ['users-for-teams'],
+    queryFn: async () => {
+      const { data } = await api.get<UserListItemDto[]>('/users');
+      return data;
+    },
+  });
+
+  const profilesQuery = useQuery({
+    queryKey: ['profiles-for-teams'],
+    queryFn: async () => {
+      const { data } = await api.get<ProfileListItemDto[]>('/profiles');
+      return data;
+    },
+  });
+
+  const teams = teamsQuery.data ?? [];
+  const allUsers = usersQuery.data ?? [];
+  const profiles = profilesQuery.data ?? [];
+  const profileOrder: Record<string, number> = { 'Administrador': 0, 'Gerente': 1, 'Supervisor': 2, 'Atendente': 3 };
+  const activeProfiles = profiles
+    .filter((p) => p.isActive)
+    .sort((a, b) => (profileOrder[a.name] ?? 99) - (profileOrder[b.name] ?? 99));
+  const supervisorUsers = allUsers.filter((u) => u.profile?.name === 'Supervisor' && u.isActive);
+
+  // ── Create User ──
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserProfileId, setNewUserProfileId] = useState('');
+
+  const createUserMutation = useMutation({
+    mutationFn: async () => {
+      const body: CreateUserRequest = {
+        fullName: newUserName,
+        email: newUserEmail,
+        password: newUserPassword,
+        profileId: newUserProfileId,
+      };
+      const { data } = await api.post('/users', body);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-for-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      setNewUserName('');
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserProfileId('');
+      setShowCreateUser(false);
+      toast({ title: 'Usuário criado com sucesso' });
+    },
+    onError: () => toast({ title: 'Erro ao criar usuário', variant: 'destructive' }),
+  });
+
+  // Team CRUD state
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamSupervisorId, setNewTeamSupervisorId] = useState('');
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editTeamSupervisorId, setEditTeamSupervisorId] = useState('');
+  const [editTeamMemberIds, setEditTeamMemberIds] = useState<string[]>([]);
+
+  const createTeamMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<TeamResponse>('/teams', {
+        name: newTeamName,
+        supervisorId: newTeamSupervisorId && newTeamSupervisorId !== '__none' ? newTeamSupervisorId : undefined,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      setNewTeamName('');
+      setNewTeamSupervisorId('');
+      setShowCreateTeam(false);
+      toast({ title: 'Equipe criada com sucesso' });
+    },
+    onError: () => toast({ title: 'Erro ao criar equipe', variant: 'destructive' }),
+  });
+
+  const updateTeamMutation = useMutation({
+    mutationFn: async ({ id, ...body }: { id: string; name?: string; supervisorId?: string | null; memberIds?: string[] }) => {
+      const { data } = await api.put<TeamResponse>(`/teams/${id}`, body);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['users-for-teams'] });
+      setEditingTeamId(null);
+      toast({ title: 'Equipe atualizada' });
+    },
+    onError: () => toast({ title: 'Erro ao atualizar equipe', variant: 'destructive' }),
+  });
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/teams/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['users-for-teams'] });
+      toast({ title: 'Equipe removida' });
+    },
+    onError: () => toast({ title: 'Erro ao remover equipe', variant: 'destructive' }),
+  });
+
+  const startEditTeam = (team: TeamResponse) => {
+    setEditingTeamId(team.id);
+    setEditTeamName(team.name);
+    setEditTeamSupervisorId(team.supervisorId ?? '__none');
+    setEditTeamMemberIds(team.members.map((m) => m.id));
+  };
+
+  const saveTeam = () => {
+    if (!editingTeamId) return;
+    updateTeamMutation.mutate({
+      id: editingTeamId,
+      name: editTeamName,
+      supervisorId: editTeamSupervisorId && editTeamSupervisorId !== '__none' ? editTeamSupervisorId : null,
+      memberIds: editTeamMemberIds,
+    });
+  };
+
+  const toggleTeamMember = (userId: string) => {
+    setEditTeamMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  };
+
+  const profileName = user?.profileName ?? user?.profile?.name ?? '';
   
   // WhatsApp Connection State
   const [whatsappConnection, setWhatsappConnection] = useState<WhatsAppConnection>({
@@ -159,34 +338,6 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
     });
   };
 
-  const handleAddAgent = () => {
-    const agent: Agent = {
-      id: `agent-${Date.now()}`,
-      name: newAgent.name,
-      email: newAgent.email,
-      role: newAgent.role,
-      status: 'offline',
-      activeConversations: 0,
-      totalSales: 0,
-    };
-    setAgents(prev => [...prev, agent]);
-    setNewAgent({ name: '', email: '', role: 'agent' });
-    setShowAddAgent(false);
-    toast({
-      title: 'Atendente Adicionado',
-      description: `${agent.name} foi adicionado com sucesso.`,
-    });
-  };
-
-  const handleRemoveAgent = (agentId: string) => {
-    const agent = agents.find(a => a.id === agentId);
-    setAgents(prev => prev.filter(a => a.id !== agentId));
-    toast({
-      title: 'Atendente Removido',
-      description: `${agent?.name} foi removido da equipe.`,
-    });
-  };
-
   const handleTransfer = (fromAgent: string, toAgent: string) => {
     toast({
       title: 'Transferência Solicitada',
@@ -195,10 +346,7 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
   };
 
   const handleSaveAgencySettings = () => {
-    toast({
-      title: 'Configurações Salvas',
-      description: 'As configurações da agência foram atualizadas com sucesso.',
-    });
+    saveBrandingMutation.mutate();
   };
 
   const handleTestWhatsAppConnection = async () => {
@@ -290,28 +438,26 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
   };
 
   const handleLogoUpload = () => {
-    // Simulate logo upload
-    setAgencySettings(prev => ({
-      ...prev,
-      logo: 'https://via.placeholder.com/200x80?text=Logo+Agência'
-    }));
-    toast({
-      title: 'Logo Atualizado',
-      description: 'O logo da agência foi carregado com sucesso.',
-    });
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAgencySettings(prev => ({ ...prev, logo: reader.result as string }));
+        toast({ title: 'Logo carregado', description: 'Clique em Salvar para aplicar.' });
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   };
 
-  const roleColors = {
-    admin: 'bg-destructive/10 text-destructive',
-    supervisor: 'bg-warning/10 text-warning',
-    agent: 'bg-primary/10 text-primary',
-  };
-
-  const statusColors = {
-    online: 'bg-success',
-    offline: 'bg-muted-foreground',
-    busy: 'bg-warning',
-  };
+  // Profiles that only see their own team (read-only)
+  const isReadOnlyTeamView = profileName === 'Supervisor' || profileName === 'Atendente';
+  // Only Administrador sees all admin tabs
+  const showAllAdminTabs = isDefaultProfile;
 
   return (
     <div className="flex-1 overflow-hidden p-6">
@@ -326,147 +472,242 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
             <Users className="h-4 w-4" />
             Equipe
           </TabsTrigger>
-          <TabsTrigger value="transfers" className="gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            Transferências
-          </TabsTrigger>
-          <TabsTrigger value="sdr" className="gap-2">
-            <Bot className="h-4 w-4" />
-            IA SDR
-          </TabsTrigger>
-          <TabsTrigger value="ai-config" className="gap-2">
-            <Brain className="h-4 w-4" />
-            IA Config
-          </TabsTrigger>
-          <TabsTrigger value="pdf" className="gap-2">
-            <FileText className="h-4 w-4" />
-            PDF & Branding
-          </TabsTrigger>
-          <TabsTrigger value="whatsapp" className="gap-2">
-            <Smartphone className="h-4 w-4" />
-            WhatsApp
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Configurações
-          </TabsTrigger>
+          {showAllAdminTabs && (
+            <>
+              <TabsTrigger value="transfers" className="gap-2">
+                <ArrowLeftRight className="h-4 w-4" />
+                Transferências
+              </TabsTrigger>
+              <TabsTrigger value="sdr" className="gap-2">
+                <Bot className="h-4 w-4" />
+                IA SDR
+              </TabsTrigger>
+              <TabsTrigger value="ai-config" className="gap-2">
+                <Brain className="h-4 w-4" />
+                IA Config
+              </TabsTrigger>
+              <TabsTrigger value="pdf" className="gap-2">
+                <FileText className="h-4 w-4" />
+                PDF & Branding
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp" className="gap-2">
+                <Smartphone className="h-4 w-4" />
+                WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Configurações
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="team" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Atendentes</h2>
-            <Dialog open={showAddAgent} onOpenChange={setShowAddAgent}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
+            <h2 className="text-lg font-semibold">Equipes</h2>
+            <div className="flex gap-2">
+              {canCreateUsers && (
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowCreateUser(true)}>
                   <UserPlus className="h-4 w-4" />
-                  Adicionar Atendente
+                  Novo Usuário
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Novo Atendente</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      value={newAgent.name}
-                      onChange={(e) => setNewAgent(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nome completo"
-                    />
+              )}
+              {canCreateTeams && (
+                <Button size="sm" className="gap-2" onClick={() => setShowCreateTeam(true)}>
+                  <Plus className="h-4 w-4" />
+                  Nova Equipe
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Create User Dialog */}
+          <Dialog open={showCreateUser} onOpenChange={setShowCreateUser}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Novo Usuário</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-2">
+                <div className="space-y-2">
+                  <Label>Nome completo</Label>
+                  <Input value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="Nome completo" />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail</Label>
+                  <Input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="email@empresa.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Senha</Label>
+                  <Input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Perfil de Acesso</Label>
+                  <Select value={newUserProfileId} onValueChange={setNewUserProfileId}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar perfil..." /></SelectTrigger>
+                    <SelectContent>
+                      {activeProfiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!newUserName.trim() || !newUserEmail.trim() || newUserPassword.length < 6 || !newUserProfileId || createUserMutation.isPending}
+                  onClick={() => createUserMutation.mutate()}
+                >
+                  {createUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Criar Usuário
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Create Team Form */}
+          {showCreateTeam && canCreateTeams && (
+            <Card className="border-primary/30">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">Nova Equipe</h3>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setShowCreateTeam(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome</Label>
+                    <Input value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} placeholder="Nome da equipe" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>E-mail</Label>
-                    <Input
-                      type="email"
-                      value={newAgent.email}
-                      onChange={(e) => setNewAgent(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="email@agencia.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Função</Label>
-                    <Select
-                      value={newAgent.role}
-                      onValueChange={(value: 'admin' | 'agent' | 'supervisor') => 
-                        setNewAgent(prev => ({ ...prev, role: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Supervisor</Label>
+                    <Select value={newTeamSupervisorId} onValueChange={setNewTeamSupervisorId}>
+                      <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="agent">Atendente</SelectItem>
-                        <SelectItem value="supervisor">Supervisor</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="__none">Nenhum</SelectItem>
+                        {supervisorUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleAddAgent} className="w-full">
-                    Adicionar
-                  </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+                <Button size="sm" disabled={!newTeamName.trim() || createTeamMutation.isPending} onClick={() => createTeamMutation.mutate()}>
+                  {createTeamMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  Criar
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-          <ScrollArea className="h-[calc(100vh-280px)]">
-            <div className="grid gap-4">
-              {agents.map((agent) => (
-                <Card key={agent.id} className="border-border/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Avatar className="h-12 w-12">
-                            <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                              {agent.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card ${statusColors[agent.status]}`} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{agent.name}</span>
-                            <Badge className={roleColors[agent.role]} variant="secondary">
-                              {agent.role === 'admin' ? 'Admin' : agent.role === 'supervisor' ? 'Supervisor' : 'Atendente'}
-                            </Badge>
+          {teamsQuery.isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : teams.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Nenhuma equipe cadastrada</p>
+                <p className="text-sm">Crie uma equipe para organizar seus atendentes.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ScrollArea className="h-[calc(100vh-320px)]">
+              <div className="space-y-3">
+                {teams.map((team) => (
+                  <Card key={team.id} className="border-border/50">
+                    <CardContent className="p-4">
+                      {editingTeamId === team.id ? (
+                        /* ── Edit Mode ── */
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Nome</Label>
+                              <Input value={editTeamName} onChange={(e) => setEditTeamName(e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Supervisor</Label>
+                              <Select value={editTeamSupervisorId} onValueChange={setEditTeamSupervisorId}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none">Nenhum</SelectItem>
+                                  {supervisorUsers.map((u) => (
+                                    <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">{agent.email}</p>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Membros</Label>
+                            <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto">
+                              {allUsers.filter((u) => u.isActive && !u.profile?.isDefault).map((u) => (
+                                <label key={u.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
+                                  <Checkbox checked={editTeamMemberIds.includes(u.id)} onCheckedChange={() => toggleTeamMember(u.id)} />
+                                  <span>{u.fullName}</span>
+                                  <Badge variant="outline" className="ml-auto text-[10px]">{u.profile?.name}</Badge>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" disabled={updateTeamMutation.isPending} onClick={saveTeam}>
+                              {updateTeamMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                              Salvar
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingTeamId(null)}>Cancelar</Button>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-6">
-                        <div className="text-center">
-                          <p className="text-lg font-semibold text-foreground">{agent.activeConversations}</p>
-                          <p className="text-xs text-muted-foreground">Atendimentos</p>
+                      ) : (
+                        /* ── View Mode ── */
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">{team.name}</span>
+                              {team.supervisorName && (
+                                <Badge variant="secondary" className="bg-warning/10 text-warning text-xs">
+                                  Supervisor: {team.supervisorName}
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="text-xs">{team.members.length} membro{team.members.length !== 1 ? 's' : ''}</Badge>
+                            </div>
+                            {!isReadOnlyTeamView && (
+                              <div className="flex gap-1">
+                                {canUpdateTeams && (
+                                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEditTeam(team)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {canDeleteTeams && (
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteTeamMutation.mutate(team.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {team.members.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {team.members.map((m) => (
+                                <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50 text-sm">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                      {m.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{m.fullName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Sem membros</p>
+                          )}
                         </div>
-                        <div className="text-center">
-                          <p className="text-lg font-semibold text-primary">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(agent.totalSales)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Vendas</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="icon" variant="ghost" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleRemoveAgent(agent.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
         </TabsContent>
 
         <TabsContent value="transfers" className="space-y-4">
@@ -483,9 +724,9 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
                       <SelectValue placeholder="Selecione o atendente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {agents.filter(a => a.activeConversations > 0).map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.name} ({agent.activeConversations} atendimentos)
+                      {allUsers.filter(u => u.isActive).map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.fullName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -498,9 +739,9 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
                       <SelectValue placeholder="Selecione o atendente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {agents.filter(a => a.status === 'online').map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.name} ({agent.activeConversations} atendimentos)
+                      {allUsers.filter(u => u.isActive).map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.fullName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -866,7 +1107,8 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
               </Card>
 
               {/* Save Button */}
-              <Button onClick={handleSaveAgencySettings} className="w-full">
+              <Button onClick={handleSaveAgencySettings} className="w-full" disabled={saveBrandingMutation.isPending}>
+                {saveBrandingMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 Salvar Configurações
               </Button>
             </div>

@@ -129,4 +129,13 @@ export interface CompanyDto {
   createdIn: string;
   isActive: boolean;
   updatedIn: string;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  address?: string | null;
+  logo?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  footerText?: string | null;
+  termsText?: string | null;
 }
