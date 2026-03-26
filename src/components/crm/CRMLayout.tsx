@@ -87,7 +87,8 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 export function CRMLayout() {
   const { user } = useAuth();
   const gamificationAgent = useGamificationAgent();
-  const { canAccessCrmAdmin, canAccessCrmSupervision } = useAccessControl();
+  const { canAccessCrmAdmin, canAccessCrmSupervision, canManageTeams } = useAccessControl();
+  const showAdminOrTeam = canAccessCrmAdmin || canManageTeams;
   const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
   const { enableAutopilot, disableAutopilot, isAutopilotActive } = useAutopilot();
   // Local state for conversation overrides (until DB update propagates)
@@ -162,9 +163,9 @@ export function CRMLayout() {
   const [completedServiceConversations, setCompletedServiceConversations] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (viewMode === 'admin' && !canAccessCrmAdmin) setViewMode('chat');
+    if (viewMode === 'admin' && !showAdminOrTeam) setViewMode('chat');
     if (viewMode === 'supervision' && !canAccessCrmSupervision) setViewMode('chat');
-  }, [viewMode, canAccessCrmAdmin, canAccessCrmSupervision]);
+  }, [viewMode, showAdminOrTeam, canAccessCrmSupervision]);
 
   // Count pending conversations
   const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
@@ -483,7 +484,7 @@ export function CRMLayout() {
               <BarChart3 className="w-4 h-4" />
               Métricas
             </Button>
-            {canAccessCrmAdmin && (
+            {showAdminOrTeam && (
               <Button
                 variant={viewMode === 'admin' ? 'default' : 'ghost'}
                 size="sm"
@@ -491,7 +492,7 @@ export function CRMLayout() {
                 className="flex-1 gap-2"
               >
                 <Settings className="w-4 h-4" />
-                Admin
+                {canAccessCrmAdmin ? 'Admin' : 'Equipe'}
               </Button>
             )}
             {canAccessCrmSupervision && (
@@ -683,14 +684,14 @@ export function CRMLayout() {
                       <BarChart3 className="w-5 h-5" />
                       Métricas
                     </Button>
-                    {canAccessCrmAdmin && (
+                    {showAdminOrTeam && (
                       <Button
                         variant={viewMode === 'admin' ? 'default' : 'ghost'}
                         className="justify-start gap-3"
                         onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
                       >
                         <Settings className="w-5 h-5" />
-                        Administração
+                        {canAccessCrmAdmin ? 'Administração' : 'Equipe'}
                       </Button>
                     )}
                     {canAccessCrmSupervision && (
@@ -830,7 +831,7 @@ export function CRMLayout() {
               <BarChart3 className="w-5 h-5" />
               <span className="text-xs">Métricas</span>
             </Button>
-            {canAccessCrmAdmin && (
+            {showAdminOrTeam && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -838,7 +839,7 @@ export function CRMLayout() {
                 onClick={() => setViewMode('admin')}
               >
                 <Settings className="w-5 h-5" />
-                <span className="text-xs">Admin</span>
+                <span className="text-xs">{canAccessCrmAdmin ? 'Admin' : 'Equipe'}</span>
               </Button>
             )}
           </div>

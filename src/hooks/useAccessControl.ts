@@ -58,9 +58,23 @@ export function useAccessControl() {
 
   const canManageProfiles = isDefaultProfile || (menusReady && hasMenuAction('/profiles'));
 
-  const canAccessCrmAdmin = isDefaultProfile;
+  const teamsMenu = useMemo(
+    () => (query.data ?? []).find((m) => m.action === '/teams'),
+    [query.data],
+  );
+  const teamsPerms = teamsMenu?.permissions;
 
-  const canAccessCrmSupervision = isDefaultProfile;
+  const canManageTeams =
+    isDefaultProfile || (menusReady && Boolean(teamsPerms?.canFindAll ?? hasMenuAction('/teams')));
+  const canCreateTeams = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canCreate));
+  const canUpdateTeams = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canUpdate));
+  const canDeleteTeams = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canDelete));
+
+  const showTeamsNav = isDefaultProfile || query.isLoading || hasMenuAction('/teams');
+
+  const canAccessCrmAdmin = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canCreate || usersPerms?.canCreate));
+
+  const canAccessCrmSupervision = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canFindAll));
 
   const showUsersNav =
     isDefaultProfile || query.isLoading || hasMenuAction('/users');
@@ -81,6 +95,11 @@ export function useAccessControl() {
     canManageProfiles,
     showUsersNav,
     showProfilesNav,
+    canManageTeams,
+    canCreateTeams,
+    canUpdateTeams,
+    canDeleteTeams,
+    showTeamsNav,
     canAccessCrmAdmin,
     canAccessCrmSupervision,
     refetchMenus: query.refetch,
