@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getApiErrorMessage } from '@/lib/apiError';
 
@@ -113,6 +113,11 @@ const Login = () => {
             )}
           </button>
         </form>
+
+        <div className="login-footer">
+          <span>Ainda não tem conta?</span>
+          <Link to="/register" className="login-link">Criar conta</Link>
+        </div>
       </div>
 
       <style>{`
@@ -241,6 +246,28 @@ const Login = () => {
 
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+
+        .login-footer {
+          margin-top: 1.5rem;
+          text-align: center;
+          font-size: 0.85rem;
+          color: #94a3b8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.4rem;
+        }
+
+        .login-link {
+          color: #818cf8;
+          text-decoration: none;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+
+        .login-link:hover {
+          color: #a5b4fc;
         }
       `}</style>
     </div>

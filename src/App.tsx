@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { CRMLayout } from "@/components/crm/CRMLayout";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import GovernancaUsuarios from "./pages/GovernancaUsuarios";
 import GovernancaPerfis from "./pages/GovernancaPerfis";
@@ -90,6 +91,14 @@ const App = () => (
               element={
                 <PublicRoute>
                   <Login />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <Register />
                 </PublicRoute>
               }
             />
