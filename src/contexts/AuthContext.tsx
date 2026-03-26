@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
-import { getTenantSchemaFromAccessToken } from '@/lib/jwtTenantSchema';
+import { getTenantSchemaFromAccessToken, getRoleFromAccessToken } from '@/lib/jwtTenantSchema';
 
 export interface AuthUser {
   id: string;
@@ -11,6 +11,7 @@ export interface AuthUser {
   companyId?: string;
   profileName?: string;
   profileIsDefault?: boolean;
+  role?: string;
   profile?: {
     id: string;
     name: string;
@@ -26,6 +27,7 @@ interface LoginResponseUser {
   profileId: string;
   profileName: string;
   profileIsDefault?: boolean;
+  role?: string;
 }
 
 function mapLoginUser(u: LoginResponseUser): AuthUser {
@@ -36,6 +38,7 @@ function mapLoginUser(u: LoginResponseUser): AuthUser {
     profileId: u.profileId,
     profileName: u.profileName,
     profileIsDefault: u.profileIsDefault,
+    role: u.role,
     profile: {
       id: u.profileId,
       name: u.profileName,
@@ -49,9 +52,11 @@ interface AuthContextData {
   user: AuthUser | null;
   token: string | null;
   tenantCnpj: string | null;
+  role: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (cnpj: string, email: string, password: string) => Promise<void>;
+  ownerLogin: (email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
 }
@@ -76,6 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (d.length === 14) return d;
     }
     return getTenantSchemaFromAccessToken(localStorage.getItem('auth_token'));
+  });
+  const [role, setRole] = useState<string | null>(() => {
+    return getRoleFromAccessToken(localStorage.getItem('auth_token'));
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -104,10 +112,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // On mount, if token exists, load profile
+  // On mount, if token exists, load profile (skip for Owner — no tenant context)
   useEffect(() => {
     if (token) {
-      loadProfile().finally(() => setIsLoading(false));
+      const tokenRole = getRoleFromAccessToken(token);
+      if (tokenRole === 'OWNER') {
+        setIsLoading(false);
+      } else {
+        loadProfile().finally(() => setIsLoading(false));
+      }
     } else {
       setIsLoading(false);
     }
@@ -123,10 +136,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!jwt) throw new Error('Token não retornado pelo servidor');
 
     const digits = cnpj.replace(/\D/g, '');
+    const tokenRole = getRoleFromAccessToken(jwt) || 'USER';
     localStorage.setItem('auth_token', jwt);
     localStorage.setItem('tenant_cnpj', digits);
     setToken(jwt);
     setTenantCnpj(digits);
+    setRole(tokenRole);
 
     if (data.user) {
       const mapped = mapLoginUser(data.user);
@@ -138,6 +153,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const ownerLogin = async (email: string, password: string) => {
+    const { data } = await api.post<{
+      accessToken: string;
+      user?: LoginResponseUser;
+    }>('/auth/owner-login', { email, password });
+
+    const jwt = data.accessToken;
+    if (!jwt) throw new Error('Token não retornado pelo servidor');
+
+    localStorage.setItem('auth_token', jwt);
+    localStorage.removeItem('tenant_cnpj');
+    setToken(jwt);
+    setTenantCnpj(null);
+    setRole('OWNER');
+
+    if (data.user) {
+      const mapped = mapLoginUser(data.user);
+      setUser(mapped);
+      localStorage.setItem('auth_user', JSON.stringify(mapped));
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
@@ -145,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     setTenantCnpj(null);
+    setRole(null);
     window.location.href = '/login';
   };
 
@@ -158,9 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         tenantCnpj,
+        role,
         isAuthenticated: !!token && !!user,
         isLoading,
         login,
+        ownerLogin,
         logout,
         refreshProfile,
       }}

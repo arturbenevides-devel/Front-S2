@@ -8,8 +8,9 @@ const Login = () => {
   const [cnpj, setCnpj] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isOwnerMode, setIsOwnerMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, ownerLogin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -18,9 +19,14 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const cnpjDigits = cnpj.replace(/\D/g, '');
-      await login(cnpjDigits, email, password);
-      navigate('/');
+      if (isOwnerMode) {
+        await ownerLogin(email, password);
+        navigate('/owner');
+      } else {
+        const cnpjDigits = cnpj.replace(/\D/g, '');
+        await login(cnpjDigits, email, password);
+        navigate('/');
+      }
     } catch (error: unknown) {
       const message = getApiErrorMessage(error, 'Credenciais inválidas. Tente novamente.');
       toast({
@@ -49,31 +55,33 @@ const Login = () => {
               </defs>
             </svg>
           </div>
-          <h1>Bem-vindo</h1>
-          <p>Entre com suas credenciais para acessar o sistema</p>
+          <h1>{isOwnerMode ? 'Acesso administrativo' : 'Bem-vindo'}</h1>
+          <p>{isOwnerMode ? 'Entre com suas credenciais de administrador do sistema' : 'Entre com suas credenciais para acessar o sistema'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="cnpj">CNPJ da Empresa</label>
-            <input
-              id="cnpj"
-              type="text"
-              value={cnpj}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/\D/g, '').slice(0, 14);
-                const masked = digits
-                  .replace(/(\d{2})(\d)/, '$1.$2')
-                  .replace(/(\d{3})(\d)/, '$1.$2')
-                  .replace(/(\d{3})(\d)/, '$1/$2')
-                  .replace(/(\d{4})(\d)/, '$1-$2');
-                setCnpj(masked);
-              }}
-              placeholder="00.000.000/0000-00"
-              required
-              autoFocus
-            />
-          </div>
+          {!isOwnerMode && (
+            <div className="form-group">
+              <label htmlFor="cnpj">CNPJ da Empresa</label>
+              <input
+                id="cnpj"
+                type="text"
+                value={cnpj}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 14);
+                  const masked = digits
+                    .replace(/(\d{2})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1/$2')
+                    .replace(/(\d{4})(\d)/, '$1-$2');
+                  setCnpj(masked);
+                }}
+                placeholder="00.000.000/0000-00"
+                required
+                autoFocus
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="email">E-mail</label>
@@ -85,6 +93,7 @@ const Login = () => {
               placeholder="seu@email.com"
               required
               autoComplete="email"
+              autoFocus={isOwnerMode}
             />
           </div>
 
@@ -104,7 +113,7 @@ const Login = () => {
           <button
             type="submit"
             className="login-button"
-            disabled={isLoading || !cnpj || !email || !password}
+            disabled={isLoading || (!isOwnerMode && !cnpj) || !email || !password}
           >
             {isLoading ? (
               <span className="login-spinner" />
@@ -115,8 +124,33 @@ const Login = () => {
         </form>
 
         <div className="login-footer">
-          <span>Ainda não tem conta?</span>
-          <Link to="/register" className="login-link">Criar conta</Link>
+          {!isOwnerMode ? (
+            <>
+              <span>Ainda não tem conta?</span>
+              <Link to="/register" className="login-link">Criar conta</Link>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="login-link"
+              onClick={() => setIsOwnerMode(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+            >
+              Voltar ao login padrão
+            </button>
+          )}
+        </div>
+
+        <div className="login-admin-toggle">
+          {!isOwnerMode && (
+            <button
+              type="button"
+              className="login-admin-btn"
+              onClick={() => setIsOwnerMode(true)}
+            >
+              Acesso administrativo
+            </button>
+          )}
         </div>
       </div>
 
@@ -268,6 +302,25 @@ const Login = () => {
 
         .login-link:hover {
           color: #a5b4fc;
+        }
+
+        .login-admin-toggle {
+          margin-top: 0.75rem;
+          text-align: center;
+        }
+
+        .login-admin-btn {
+          background: none;
+          border: none;
+          color: #475569;
+          font-size: 0.75rem;
+          cursor: pointer;
+          transition: color 0.2s;
+          font-family: inherit;
+        }
+
+        .login-admin-btn:hover {
+          color: #94a3b8;
         }
       `}</style>
     </div>

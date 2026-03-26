@@ -24,3 +24,11 @@ export function getTenantSchemaFromAccessToken(token: string | null | undefined)
   const digits = raw.replace(/\D/g, '');
   return digits.length === 14 ? digits : null;
 }
+
+/** Lê `role` do access token (OWNER, TENANT_ADMIN, USER). */
+export function getRoleFromAccessToken(token: string | null | undefined): string | null {
+  if (!token) return null;
+  const payload = parseJwtPayload(token);
+  const role = payload?.role;
+  return typeof role === 'string' ? role : null;
+}

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { OwnerLayout } from "@/components/layout/OwnerLayout";
 import { CRMLayout } from "@/components/crm/CRMLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -14,6 +15,7 @@ import GovernancaPerfis from "./pages/GovernancaPerfis";
 import GovernancaEmpresa from "./pages/GovernancaEmpresa";
 import GovernancaAuditoria from "./pages/GovernancaAuditoria";
 import ActivateAccount from "./pages/ActivateAccount";
+import OwnerDashboard from "./pages/OwnerDashboard";
 
 function LegacyNewPasswordRedirect() {
   const { token } = useParams();
@@ -24,8 +26,8 @@ function LegacyNewPasswordRedirect() {
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({ children, ownerOnly }: { children: React.ReactNode; ownerOnly?: boolean }) {
+  const { isAuthenticated, isLoading, role } = useAuth();
 
   if (isLoading) {
     return (
@@ -47,11 +49,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Owner trying to access tenant routes → redirect to owner panel
+  if (!ownerOnly && role === 'OWNER') {
+    return <Navigate to="/owner" replace />;
+  }
+
+  // Non-owner trying to access owner routes → redirect to home
+  if (ownerOnly && role !== 'OWNER') {
+    return <Navigate to="/" replace />;
+  }
+
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, role } = useAuth();
 
   if (isLoading) {
     return (
@@ -72,7 +84,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={role === 'OWNER' ? '/owner' : '/'} replace />;
   }
 
   return <>{children}</>;
@@ -111,6 +123,16 @@ const App = () => (
               }
             />
             <Route path="/new-password/:token" element={<LegacyNewPasswordRedirect />} />
+            <Route
+              path="/owner"
+              element={
+                <ProtectedRoute ownerOnly>
+                  <OwnerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<OwnerDashboard />} />
+            </Route>
             <Route
               path="/"
               element={
