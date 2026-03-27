@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
+import { isPasswordValid } from '@/lib/passwordValidation';
+import { PasswordHints } from '@/components/ui/password-hints';
 import type { UserListItemDto, ProfileListItemDto, CreateUserRequest } from '@/types/api';
 
 interface TeamMember {
@@ -538,7 +540,8 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
                 </div>
                 <div className="space-y-2">
                   <Label>Senha</Label>
-                  <Input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                  <Input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Min. 8 caracteres" />
+                  <PasswordHints password={newUserPassword} />
                 </div>
                 <div className="space-y-2">
                   <Label>Perfil de Acesso</Label>
@@ -553,7 +556,7 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
                 </div>
                 <Button
                   className="w-full"
-                  disabled={!newUserName.trim() || !newUserEmail.trim() || newUserPassword.length < 6 || !newUserProfileId || createUserMutation.isPending}
+                  disabled={!newUserName.trim() || !newUserEmail.trim() || !isPasswordValid(newUserPassword) || !newUserProfileId || createUserMutation.isPending}
                   onClick={() => createUserMutation.mutate()}
                 >
                   {createUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

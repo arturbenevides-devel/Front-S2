@@ -4,6 +4,8 @@ import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { useTenantCompany } from '@/hooks/useTenantCompany';
+import { isPasswordValid } from '@/lib/passwordValidation';
+import { PasswordHints } from '@/components/ui/password-hints';
 import { AccessDenied } from '@/components/governance/AccessDenied';
 import type { CreateUserRequest, ProfileListItemDto, UpdateUserRequest, UserListItemDto } from '@/types/api';
 import {
@@ -338,12 +340,13 @@ export default function GovernancaUsuarios() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Min. 8 caracteres"
                     autoComplete="new-password"
-                    minLength={6}
+                    minLength={8}
                     required
                     aria-required
                   />
+                  <PasswordHints password={password} />
                   <p className="text-xs text-muted-foreground">Obrigatória. O usuário poderá alterá-la ao ativar o convite.</p>
                 </div>
                 <div className="space-y-2">
@@ -383,7 +386,7 @@ export default function GovernancaUsuarios() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createMutation.isPending || password.trim().length < 6}
+                  disabled={createMutation.isPending || !isPasswordValid(password)}
                 >
                   {createMutation.isPending ? (
                     <>

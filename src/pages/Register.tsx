@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getApiErrorMessage } from '@/lib/apiError';
 import api from '@/lib/api';
+import { isPasswordValid } from '@/lib/passwordValidation';
+import { PasswordHints } from '@/components/ui/password-hints';
 
 function maskCnpj(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 14);
@@ -53,7 +55,7 @@ const Register = () => {
     companyName.trim().length >= 2 &&
     fullName.trim().length >= 2 &&
     email.includes('@') &&
-    password.length >= 6;
+    isPasswordValid(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,11 +170,12 @@ const Register = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 6 caracteres"
-              minLength={6}
+              placeholder="Min. 8 caracteres"
+              minLength={8}
               required
               autoComplete="new-password"
             />
+            <PasswordHints password={password} />
           </div>
 
           <button

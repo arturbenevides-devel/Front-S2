@@ -5,6 +5,8 @@ import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import type { ValidateResetTokenResponse } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
+import { isPasswordValid } from '@/lib/passwordValidation';
+import { PasswordHints } from '@/components/ui/password-hints';
 
 function maskCnpjInput(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 14);
@@ -214,19 +216,19 @@ export default function ActivateAccount() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 caracteres"
+                placeholder="Min. 8 caracteres"
                 autoComplete="new-password"
-                minLength={6}
+                minLength={8}
                 required
                 autoFocus
               />
-              <span className="activate-hint">Mínimo de 6 caracteres</span>
+              <PasswordHints password={password} />
             </div>
 
             <button
               type="submit"
               className="activate-button"
-              disabled={activateMutation.isPending || password.trim().length < 6}
+              disabled={activateMutation.isPending || !isPasswordValid(password)}
             >
               {activateMutation.isPending ? (
                 <span className="activate-spinner" />

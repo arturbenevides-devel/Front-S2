@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { useToast } from '@/hooks/use-toast';
+import { isPasswordValid } from '@/lib/passwordValidation';
+import { PasswordHints } from '@/components/ui/password-hints';
 import type { UserListItemDto, ProfileListItemDto } from '@/types/api';
 import {
   Table,
@@ -838,8 +840,8 @@ export default function OwnerDashboard() {
       toast({ title: 'Nome inválido', description: 'Informe pelo menos 2 caracteres.', variant: 'destructive' });
       return;
     }
-    if (tenantAdminPassword.trim().length < 6) {
-      toast({ title: 'Senha inválida', description: 'Mínimo 6 caracteres.', variant: 'destructive' });
+    if (!isPasswordValid(tenantAdminPassword)) {
+      toast({ title: 'Senha inválida', description: 'A senha deve ter no mínimo 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial.', variant: 'destructive' });
       return;
     }
     createTenantMutation.mutate({
@@ -860,8 +862,8 @@ export default function OwnerDashboard() {
       toast({ title: 'Nome inválido', description: 'Informe pelo menos 2 caracteres.', variant: 'destructive' });
       return;
     }
-    if (trimmedPassword.length < 6) {
-      toast({ title: 'Senha inválida', description: 'Mínimo 6 caracteres.', variant: 'destructive' });
+    if (!isPasswordValid(trimmedPassword)) {
+      toast({ title: 'Senha inválida', description: 'A senha deve ter no mínimo 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial.', variant: 'destructive' });
       return;
     }
     createOwnerMutation.mutate({ email: trimmedEmail, fullName: trimmedName, password: trimmedPassword });
@@ -962,11 +964,12 @@ export default function OwnerDashboard() {
                           type="password"
                           value={tenantAdminPassword}
                           onChange={(e) => setTenantAdminPassword(e.target.value)}
-                          placeholder="Mínimo 6 caracteres"
+                          placeholder="Min. 8 caracteres"
                           autoComplete="new-password"
-                          minLength={6}
+                          minLength={8}
                           required
                         />
+                        <PasswordHints password={tenantAdminPassword} />
                       </div>
                     </div>
                   </div>
@@ -1095,16 +1098,17 @@ export default function OwnerDashboard() {
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Min. 8 caracteres"
                       autoComplete="new-password"
-                      minLength={6}
+                      minLength={8}
                       required
                     />
+                    <PasswordHints password={newPassword} />
                   </div>
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={createOwnerMutation.isPending || newPassword.trim().length < 6}
+                    disabled={createOwnerMutation.isPending || !isPasswordValid(newPassword)}
                   >
                     {createOwnerMutation.isPending ? (
                       <><Loader2 className="h-4 w-4 animate-spin mr-2" />Criando…</>
