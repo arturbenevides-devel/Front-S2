@@ -5,8 +5,6 @@ import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import type { ValidateResetTokenResponse } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
-import { isPasswordValid } from '@/lib/passwordValidation';
-import { PasswordHints } from '@/components/ui/password-hints';
 
 function maskCnpjInput(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 14);
@@ -43,72 +41,35 @@ export default function ActivateAccount() {
     retry: false,
   });
 
-  const [password, setPassword] = useState('');
-
   const activateMutation = useMutation({
-    mutationFn: async (payload: {
-      cnpj: string;
-      resetToken: string;
-      auth: { email: string; password: string };
-      firstAccess: boolean;
-    }) => {
-      const path = payload.firstAccess ? '/auth/first-access' : '/auth/change-password';
-      const { data } = await api.post<{ message: string }>(path, {
-        cnpj: payload.cnpj,
-        resetToken: payload.resetToken,
-        auth: payload.auth,
+    mutationFn: async () => {
+      const { data } = await api.post<{ message: string }>('/auth/first-access', {
+        cnpj: cnpjDigits,
+        resetToken: token,
       });
       return data;
     },
     onSuccess: (data) => {
       toast({
-        title: data.message ?? 'Concluído',
-        description: 'Você já pode entrar com seu e-mail e a nova senha.',
+        title: data.message ?? 'Conta ativada!',
+        description: 'Você já pode entrar com seu e-mail e senha.',
       });
       window.location.assign('/login');
     },
     onError: (err: unknown) => {
       toast({
-        title: 'Não foi possível concluir',
+        title: 'Não foi possível ativar',
         description: getApiErrorMessage(err, 'Tente novamente.'),
         variant: 'destructive',
       });
     },
   });
 
-  const handleSubmitPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || !validateQuery.data) return;
-    const trimmed = password.trim();
-    if (!trimmed) {
-      toast({
-        title: 'Senha obrigatória',
-        description: 'Informe sua senha para concluir a ativação.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (trimmed.length < 6) {
-      toast({
-        title: 'Senha inválida',
-        description: 'A senha deve ter pelo menos 6 caracteres.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    activateMutation.mutate({
-      cnpj: cnpjDigits,
-      resetToken: token,
-      auth: { email: validateQuery.data.email, password: trimmed },
-      firstAccess: validateQuery.data.firstAccess,
-    });
-  };
-
   const validateErrorMessage = validateQuery.isError
     ? getApiErrorMessage(validateQuery.error, 'Token inválido ou expirado.')
     : null;
 
-  const showPasswordStep = validateQuery.isSuccess && validateQuery.data;
+  const showActivateStep = validateQuery.isSuccess && validateQuery.data;
 
   if (!token) {
     return (
@@ -155,17 +116,15 @@ export default function ActivateAccount() {
               </defs>
             </svg>
           </div>
-          <h1>{showPasswordStep ? 'Definir senha' : 'Ativar conta'}</h1>
+          <h1>{showActivateStep ? 'Ativar conta' : 'Validar convite'}</h1>
           <p>
-            {showPasswordStep
-              ? validateQuery.data!.firstAccess
-                ? 'Sua conta será ativada ao salvar a senha.'
-                : 'Defina uma nova senha para sua conta.'
+            {showActivateStep
+              ? 'Tudo certo! Clique no botão abaixo para ativar sua conta.'
               : 'Informe o CNPJ da empresa para validar o convite recebido por e-mail.'}
           </p>
         </div>
 
-        {!showPasswordStep ? (
+        {!showActivateStep ? (
           <div className="activate-form">
             <div className="form-group">
               <label htmlFor="act-cnpj">CNPJ da Empresa</label>
@@ -198,7 +157,7 @@ export default function ActivateAccount() {
             )}
           </div>
         ) : (
-          <form onSubmit={handleSubmitPassword} className="activate-form">
+          <div className="activate-form">
             <div className="form-group">
               <label>E-mail</label>
               <input
@@ -209,36 +168,19 @@ export default function ActivateAccount() {
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="act-pw">Nova senha</label>
-              <input
-                id="act-pw"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 caracteres"
-                autoComplete="new-password"
-                minLength={8}
-                required
-                autoFocus
-              />
-              <PasswordHints password={password} />
-            </div>
-
             <button
-              type="submit"
+              type="button"
               className="activate-button"
-              disabled={activateMutation.isPending || !isPasswordValid(password)}
+              disabled={activateMutation.isPending}
+              onClick={() => activateMutation.mutate()}
             >
               {activateMutation.isPending ? (
                 <span className="activate-spinner" />
-              ) : validateQuery.data!.firstAccess ? (
-                'Ativar conta e salvar senha'
               ) : (
-                'Salvar nova senha'
+                'Ativar minha conta'
               )}
             </button>
-          </form>
+          </div>
         )}
 
         <div className="activate-footer">
