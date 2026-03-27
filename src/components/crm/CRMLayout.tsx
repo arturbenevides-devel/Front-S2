@@ -8,6 +8,7 @@ import { TaskReminder } from './TaskReminder';
 import { TaskManagement } from './TaskManagement';
 import { AdminPanel } from './AdminPanel';
 import { SupervisionPanel } from './SupervisionPanel';
+import { ManagementPanel } from './ManagementPanel';
 import { UnresponsedAlert } from './UnresponsedAlert';
 import { CampaignManagement } from './CampaignManagement';
 import { GamificationDashboard } from './gamification/GamificationDashboard';
@@ -21,12 +22,12 @@ import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useWhatsAppMessages, WhatsAppConversation } from '@/hooks/useWhatsAppMessages';
 import { useAutopilot } from '@/hooks/useAutopilot';
 import { useAccessControl } from '@/hooks/useAccessControl';
-import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Sparkles, ArrowLeft, Menu, Bell, Gamepad2, Megaphone } from 'lucide-react';
+import { BarChart3, MessageSquare, ListTodo, Settings, Eye, Briefcase, Sparkles, ArrowLeft, Menu, Gamepad2, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
-type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'supervision' | 'gamification' | 'campaigns';
+type ViewMode = 'chat' | 'dashboard' | 'tasks' | 'admin' | 'management' | 'supervision' | 'gamification' | 'campaigns';
 type MobilePanel = 'list' | 'chat' | 'ai';
 
 // Mock initial tasks for demonstration
@@ -87,8 +88,7 @@ const mapWhatsAppToConversation = (wa: WhatsAppConversation): Conversation => {
 export function CRMLayout() {
   const { user } = useAuth();
   const gamificationAgent = useGamificationAgent();
-  const { canAccessCrmAdmin, canAccessCrmSupervision, canManageTeams } = useAccessControl();
-  const showAdminOrTeam = canAccessCrmAdmin || canManageTeams;
+  const { canAccessCrmAdmin, canAccessCrmManagement, canAccessCrmSupervision, isDefaultProfile } = useAccessControl();
   const { conversations: whatsappConversations, loading: conversationsLoading, loadConversations, unreadCounts, markAsRead } = useWhatsAppMessages();
   const { enableAutopilot, disableAutopilot, isAutopilotActive } = useAutopilot();
   // Local state for conversation overrides (until DB update propagates)
@@ -163,9 +163,10 @@ export function CRMLayout() {
   const [completedServiceConversations, setCompletedServiceConversations] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (viewMode === 'admin' && !showAdminOrTeam) setViewMode('chat');
+    if (viewMode === 'admin' && !canAccessCrmAdmin) setViewMode('chat');
+    if (viewMode === 'management' && !canAccessCrmManagement) setViewMode('chat');
     if (viewMode === 'supervision' && !canAccessCrmSupervision) setViewMode('chat');
-  }, [viewMode, showAdminOrTeam, canAccessCrmSupervision]);
+  }, [viewMode, canAccessCrmAdmin, canAccessCrmManagement, canAccessCrmSupervision]);
 
   // Count pending conversations
   const pendingCount = conversations.filter(c => c.readStatus === 'pending').length;
@@ -484,7 +485,7 @@ export function CRMLayout() {
               <BarChart3 className="w-4 h-4" />
               Métricas
             </Button>
-            {showAdminOrTeam && (
+            {canAccessCrmAdmin && (
               <Button
                 variant={viewMode === 'admin' ? 'default' : 'ghost'}
                 size="sm"
@@ -492,7 +493,18 @@ export function CRMLayout() {
                 className="flex-1 gap-2"
               >
                 <Settings className="w-4 h-4" />
-                {canAccessCrmAdmin ? 'Admin' : 'Equipe'}
+                Admin
+              </Button>
+            )}
+            {canAccessCrmManagement && (
+              <Button
+                variant={viewMode === 'management' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('management')}
+                className="flex-1 gap-2"
+              >
+                <Briefcase className="w-4 h-4" />
+                Gerência
               </Button>
             )}
             {canAccessCrmSupervision && (
@@ -593,9 +605,16 @@ export function CRMLayout() {
             onNavigate={handleNavigateToTask}
           />
         ) : viewMode === 'admin' ? (
-          <AdminPanel 
+          <AdminPanel
             gamificationEnabled={gamificationEnabled}
             onGamificationToggle={setGamificationEnabled}
+          />
+        ) : viewMode === 'management' ? (
+          <ManagementPanel
+            conversations={conversations}
+            tasks={tasks}
+            dismissedReports={dismissedReports}
+            onViewConversation={handleNavigateToTask}
           />
         ) : viewMode === 'supervision' ? (
           <SupervisionPanel
@@ -603,6 +622,7 @@ export function CRMLayout() {
             tasks={tasks}
             dismissedReports={dismissedReports}
             onViewConversation={handleNavigateToTask}
+            isSupervisor={canAccessCrmSupervision}
           />
         ) : viewMode === 'gamification' && gamificationEnabled ? (
           <GamificationDashboard />
@@ -633,6 +653,7 @@ export function CRMLayout() {
                 : viewMode === 'tasks' ? 'Tarefas'
                 : viewMode === 'dashboard' ? 'Métricas'
                 : viewMode === 'admin' ? 'Administração'
+                : viewMode === 'management' ? 'Gerência'
                 : viewMode === 'campaigns' ? 'Campanhas'
                 : 'Supervisão'
               }
@@ -684,14 +705,24 @@ export function CRMLayout() {
                       <BarChart3 className="w-5 h-5" />
                       Métricas
                     </Button>
-                    {showAdminOrTeam && (
+                    {canAccessCrmAdmin && (
                       <Button
                         variant={viewMode === 'admin' ? 'default' : 'ghost'}
                         className="justify-start gap-3"
                         onClick={() => { setViewMode('admin'); setShowMobileMenu(false); }}
                       >
                         <Settings className="w-5 h-5" />
-                        {canAccessCrmAdmin ? 'Administração' : 'Equipe'}
+                        Administração
+                      </Button>
+                    )}
+                    {canAccessCrmManagement && (
+                      <Button
+                        variant={viewMode === 'management' ? 'default' : 'ghost'}
+                        className="justify-start gap-3"
+                        onClick={() => { setViewMode('management'); setShowMobileMenu(false); }}
+                      >
+                        <Briefcase className="w-5 h-5" />
+                        Gerência
                       </Button>
                     )}
                     {canAccessCrmSupervision && (
@@ -775,12 +806,20 @@ export function CRMLayout() {
             />
           ) : viewMode === 'admin' ? (
             <AdminPanel />
+          ) : viewMode === 'management' ? (
+            <ManagementPanel
+              conversations={conversations}
+              tasks={tasks}
+              dismissedReports={dismissedReports}
+              onViewConversation={handleNavigateToTask}
+            />
           ) : viewMode === 'supervision' ? (
             <SupervisionPanel
               conversations={conversations}
               tasks={tasks}
               dismissedReports={dismissedReports}
               onViewConversation={handleNavigateToTask}
+              isSupervisor={canAccessCrmSupervision}
             />
           ) : viewMode === 'campaigns' ? (
             <CampaignManagement />
@@ -831,7 +870,7 @@ export function CRMLayout() {
               <BarChart3 className="w-5 h-5" />
               <span className="text-xs">Métricas</span>
             </Button>
-            {showAdminOrTeam && (
+            {canAccessCrmAdmin && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -839,7 +878,7 @@ export function CRMLayout() {
                 onClick={() => setViewMode('admin')}
               >
                 <Settings className="w-5 h-5" />
-                <span className="text-xs">{canAccessCrmAdmin ? 'Admin' : 'Equipe'}</span>
+                <span className="text-xs">Admin</span>
               </Button>
             )}
           </div>

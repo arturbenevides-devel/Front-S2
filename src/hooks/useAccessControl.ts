@@ -74,12 +74,25 @@ export function useAccessControl() {
 
   const canAccessCrmAdmin = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canCreate || usersPerms?.canCreate));
 
-  const canAccessCrmSupervision = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canFindAll));
+  // Gerência: admin + gerente (quem pode criar users/teams)
+  const canAccessCrmManagement = isDefaultProfile || (menusReady && Boolean(teamsPerms?.canCreate || usersPerms?.canCreate));
 
-  const showUsersNav =
-    isDefaultProfile || query.isLoading || hasMenuAction('/users');
-  const showProfilesNav =
-    isDefaultProfile || query.isLoading || hasMenuAction('/profiles');
+  // Supervisão: apenas supervisor (canFindAll em teams, mas sem canCreate — exclui admin e gerente)
+  const canAccessCrmSupervision =
+    !isDefaultProfile &&
+    menusReady &&
+    Boolean(teamsPerms?.canFindAll) &&
+    !Boolean(teamsPerms?.canCreate) &&
+    !Boolean(usersPerms?.canCreate);
+
+  // Governança visível apenas para quem pode criar/editar algo (admin, gerente)
+  const showGovernanceNav =
+    isDefaultProfile ||
+    query.isLoading ||
+    Boolean(usersPerms?.canCreate || usersPerms?.canUpdate || teamsPerms?.canCreate || teamsPerms?.canUpdate);
+
+  const showUsersNav = showGovernanceNav && (isDefaultProfile || query.isLoading || hasMenuAction('/users'));
+  const showProfilesNav = showGovernanceNav && (isDefaultProfile || query.isLoading || hasMenuAction('/profiles'));
 
   return {
     authorizedMenus: query.data ?? [],
@@ -93,6 +106,7 @@ export function useAccessControl() {
     canChangeUserStatus,
     canDeleteUsers,
     canManageProfiles,
+    showGovernanceNav,
     showUsersNav,
     showProfilesNav,
     canManageTeams,
@@ -101,6 +115,7 @@ export function useAccessControl() {
     canDeleteTeams,
     showTeamsNav,
     canAccessCrmAdmin,
+    canAccessCrmManagement,
     canAccessCrmSupervision,
     refetchMenus: query.refetch,
   };

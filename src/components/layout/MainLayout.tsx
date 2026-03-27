@@ -9,15 +9,15 @@ import { cn } from '@/lib/utils';
 export function MainLayout() {
   const { user, tenantCnpj, logout } = useAuth();
   const { company, isLoading: companyLoading } = useTenantCompany();
-  const { showUsersNav, showProfilesNav } = useAccessControl();
+  const { showGovernanceNav, showUsersNav, showProfilesNav } = useAccessControl();
   const location = useLocation();
 
   const items = [
     { to: '/', label: 'CRM', end: true, show: true },
     { to: '/governanca/usuarios', label: 'Usuários', end: false, show: showUsersNav },
     { to: '/governanca/perfis', label: 'Perfis', end: false, show: showProfilesNav },
-    { to: '/governanca/empresa', label: 'Empresa', end: false, show: true },
-    { to: '/governanca/auditoria', label: 'Auditoria', end: false, show: true },
+    { to: '/governanca/empresa', label: 'Empresa', end: false, show: showGovernanceNav },
+    { to: '/governanca/auditoria', label: 'Auditoria', end: false, show: showGovernanceNav },
   ];
 
   return (

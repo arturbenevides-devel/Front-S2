@@ -26,22 +26,25 @@ import {
 } from 'lucide-react';
 import { DismissedActivityReport, Conversation, CustomerTask, DismissType } from '@/types/crm';
 import { cn } from '@/lib/utils';
+import { MyTeamPanel } from './MyTeamPanel';
 
 interface SupervisionPanelProps {
   conversations: Conversation[];
   tasks: CustomerTask[];
   dismissedReports: DismissedActivityReport[];
   onViewConversation: (conversationId: string) => void;
+  isSupervisor?: boolean;
 }
 
 type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'custom';
 type DismissTypeFilter = 'all' | 'permanent' | 'later';
 
-export function SupervisionPanel({ 
-  conversations, 
-  tasks, 
+export function SupervisionPanel({
+  conversations,
+  tasks,
   dismissedReports,
-  onViewConversation 
+  onViewConversation,
+  isSupervisor = false,
 }: SupervisionPanelProps) {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
@@ -322,8 +325,14 @@ export function SupervisionPanel({
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="dismissed" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue={isSupervisor ? 'my-team' : 'dismissed'} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="w-fit">
+            {isSupervisor && (
+              <TabsTrigger value="my-team" className="gap-2">
+                <Users className="w-4 h-4" />
+                Sua Equipe
+              </TabsTrigger>
+            )}
             <TabsTrigger value="dismissed" className="gap-2">
               <ClipboardX className="w-4 h-4" />
               Registros Dispensados
@@ -337,6 +346,13 @@ export function SupervisionPanel({
               Por Agente
             </TabsTrigger>
           </TabsList>
+
+          {/* My Team Tab (supervisor only) */}
+          {isSupervisor && (
+            <TabsContent value="my-team" className="flex-1 mt-4 overflow-hidden">
+              <MyTeamPanel />
+            </TabsContent>
+          )}
 
           {/* Dismissed Activities Tab */}
           <TabsContent value="dismissed" className="flex-1 mt-4 overflow-hidden">
