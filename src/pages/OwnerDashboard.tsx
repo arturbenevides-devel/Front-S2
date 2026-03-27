@@ -73,6 +73,7 @@ interface Tenant {
   id: string;
   schemaName: string;
   companyName: string;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -137,10 +138,12 @@ function TenantDetailSheet({
   tenant,
   open,
   onOpenChange,
+  onTenantChange,
 }: {
   tenant: Tenant | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onTenantChange: (t: Tenant) => void;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -155,13 +158,29 @@ function TenantDetailSheet({
       const { data } = await api.put<Tenant>(`/owner/tenants/${cnpj}`, { companyName });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['owner', 'tenants'] });
+      onTenantChange(data);
       setIsEditingName(false);
       toast({ title: 'Nome atualizado.' });
     },
     onError: (err: unknown) => {
       toast({ title: 'Erro ao atualizar', description: getApiErrorMessage(err), variant: 'destructive' });
+    },
+  });
+
+  const toggleTenantStatusMutation = useMutation({
+    mutationFn: async (isActive: boolean) => {
+      const { data } = await api.post<Tenant>(`/owner/tenants/${cnpj}/status`, { isActive });
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'tenants'] });
+      onTenantChange(data);
+      toast({ title: data.isActive ? 'Tenant ativado.' : 'Tenant desativado. Nenhum usuário conseguirá acessar o sistema.' });
+    },
+    onError: (err: unknown) => {
+      toast({ title: 'Erro ao alterar status', description: getApiErrorMessage(err), variant: 'destructive' });
     },
   });
 
@@ -682,6 +701,21 @@ function TenantDetailSheet({
             )}
           </div>
 
+          {/* ---- Toggle tenant status ---- */}
+          <div className="border-t border-border pt-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Status do Tenant</p>
+              <p className="text-xs text-muted-foreground">
+                {tenant?.isActive ? 'Ativo — todos os usuários podem acessar' : 'Desativado — nenhum usuário consegue logar'}
+              </p>
+            </div>
+            <Switch
+              checked={tenant?.isActive ?? true}
+              disabled={toggleTenantStatusMutation.isPending}
+              onCheckedChange={(checked) => toggleTenantStatusMutation.mutate(checked)}
+            />
+          </div>
+
           {/* ---- Delete tenant ---- */}
           <div className="border-t border-border pt-4">
             <AlertDialog>
@@ -1026,7 +1060,10 @@ export default function OwnerDashboard() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => openTenantDetail(t)}
                       >
-                        <TableCell className="font-medium">{t.companyName}</TableCell>
+                        <TableCell className="font-medium">
+                          {t.companyName}
+                          {!t.isActive && <span className="ml-2 text-xs text-destructive font-normal">(desativado)</span>}
+                        </TableCell>
                         <TableCell className="font-mono text-sm">{formatCnpj(t.schemaName)}</TableCell>
                         <TableCell>{formatDate(t.createdAt)}</TableCell>
                         <TableCell>
@@ -1044,6 +1081,7 @@ export default function OwnerDashboard() {
             tenant={selectedTenant}
             open={sheetOpen}
             onOpenChange={setSheetOpen}
+            onTenantChange={setSelectedTenant}
           />
         </TabsContent>
 

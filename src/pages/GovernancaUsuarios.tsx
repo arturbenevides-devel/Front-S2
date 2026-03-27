@@ -161,8 +161,8 @@ export default function GovernancaUsuarios() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({
-        title: 'Usuário removido',
-        description: 'O cadastro foi desativado (soft delete no servidor).',
+        title: 'Usuário excluído',
+        description: 'O usuário foi removido permanentemente do sistema.',
       });
     },
     onError: (err: unknown) => {
@@ -544,7 +544,7 @@ export default function GovernancaUsuarios() {
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              title="Remover usuário (desativar)"
+                              title="Excluir usuário permanentemente"
                               disabled={!u.isActive}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -552,9 +552,9 @@ export default function GovernancaUsuarios() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Remover usuário "{u.fullName}"?</AlertDialogTitle>
+                              <AlertDialogTitle>Excluir usuário "{u.fullName}"?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                O cadastro será desativado no servidor (soft delete), como na API DELETE /users.
+                                Esta ação é irreversível. O usuário será permanentemente removido do sistema. Se deseja apenas impedir o acesso temporariamente, use o botão de desativar.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
