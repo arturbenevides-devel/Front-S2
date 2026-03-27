@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import api from '@/lib/api';
 import { isPasswordValid } from '@/lib/passwordValidation';
 import { PasswordHints } from '@/components/ui/password-hints';
+import { maskCpf, isValidCpf } from '@/lib/cpfValidation';
 
 function maskCnpj(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 14);
@@ -40,8 +41,10 @@ const Register = () => {
   const [cnpj, setCnpj] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [fullName, setFullName] = useState('');
+  const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,12 +53,20 @@ const Register = () => {
   const cnpjComplete = cnpjDigits.length === 14;
   const cnpjValid = cnpjComplete && isValidCnpj(cnpjDigits);
 
+  const cpfDigits = cpf.replace(/\D/g, '');
+  const cpfComplete = cpfDigits.length === 11;
+  const cpfValid = cpfComplete && isValidCpf(cpfDigits);
+
+  const passwordsMatch = password === confirmPassword;
+
   const isFormValid =
     cnpjValid &&
     companyName.trim().length >= 2 &&
     fullName.trim().length >= 2 &&
+    cpfValid &&
     email.includes('@') &&
-    isPasswordValid(password);
+    isPasswordValid(password) &&
+    passwordsMatch;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +77,7 @@ const Register = () => {
         cnpj: cnpj.replace(/\D/g, ''),
         companyName: companyName.trim(),
         fullName: fullName.trim(),
+        cpf: cpf.replace(/\D/g, ''),
         email: email.trim(),
         password,
       });
@@ -151,6 +163,22 @@ const Register = () => {
           </div>
 
           <div className="form-group">
+            <label htmlFor="reg-cpf">CPF do Administrador</label>
+            <input
+              id="reg-cpf"
+              type="text"
+              value={cpf}
+              onChange={(e) => setCpf(maskCpf(e.target.value))}
+              placeholder="000.000.000-00"
+              inputMode="numeric"
+              required
+            />
+            {cpfComplete && !cpfValid && (
+              <span className="field-error">CPF inválido</span>
+            )}
+          </div>
+
+          <div className="form-group">
             <label htmlFor="reg-email">E-mail do Administrador</label>
             <input
               id="reg-email"
@@ -176,6 +204,23 @@ const Register = () => {
               autoComplete="new-password"
             />
             <PasswordHints password={password} />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="reg-confirm-password">Confirmar Senha</label>
+            <input
+              id="reg-confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repita a senha"
+              minLength={8}
+              required
+              autoComplete="new-password"
+            />
+            {confirmPassword && !passwordsMatch && (
+              <span className="field-error">As senhas não coincidem</span>
+            )}
           </div>
 
           <button
