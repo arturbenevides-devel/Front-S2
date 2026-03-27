@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { isPasswordValid, PASSWORD_RULES } from '@/lib/passwordValidation';
 import type { ValidateResetTokenResponse } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,6 +25,8 @@ export default function ActivateAccount() {
   const [cnpjMasked, setCnpjMasked] = useState(() =>
     initialFromUrl ? maskCnpjInput(initialFromUrl) : '',
   );
+  const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
 
   const cnpjDigits = useMemo(() => cnpjMasked.replace(/\D/g, ''), [cnpjMasked]);
 
@@ -41,12 +44,22 @@ export default function ActivateAccount() {
     retry: false,
   });
 
+  const needsPassword = validateQuery.data && !validateQuery.data.hasPassword;
+  const passwordOk = isPasswordValid(password);
+  const passwordsMatch = password === passwordConfirmation;
+  const canSubmit = needsPassword ? passwordOk && passwordsMatch && passwordConfirmation.length > 0 : true;
+
   const activateMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await api.post<{ message: string }>('/auth/first-access', {
+      const body: Record<string, string> = {
         cnpj: cnpjDigits,
-        resetToken: token,
-      });
+        resetToken: token!,
+      };
+      if (needsPassword) {
+        body.password = password;
+        body.passwordConfirmation = passwordConfirmation;
+      }
+      const { data } = await api.post<{ message: string }>('/auth/first-access', body);
       return data;
     },
     onSuccess: (data) => {
@@ -116,10 +129,18 @@ export default function ActivateAccount() {
               </defs>
             </svg>
           </div>
-          <h1>{showActivateStep ? 'Ativar conta' : 'Validar convite'}</h1>
+          <h1>
+            {showActivateStep
+              ? needsPassword
+                ? 'Definir senha e ativar'
+                : 'Ativar conta'
+              : 'Validar convite'}
+          </h1>
           <p>
             {showActivateStep
-              ? 'Tudo certo! Clique no botão abaixo para ativar sua conta.'
+              ? needsPassword
+                ? 'Defina sua senha para ativar a conta.'
+                : 'Tudo certo! Clique no botão abaixo para ativar sua conta.'
               : 'Informe o CNPJ da empresa para validar o convite recebido por e-mail.'}
           </p>
         </div>
@@ -168,14 +189,56 @@ export default function ActivateAccount() {
               />
             </div>
 
+            {needsPassword && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="act-password">Senha</label>
+                  <input
+                    id="act-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Crie sua senha"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="act-password-confirm">Confirmar senha</label>
+                  <input
+                    id="act-password-confirm"
+                    type="password"
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
+                    placeholder="Repita a senha"
+                  />
+                  {passwordConfirmation.length > 0 && !passwordsMatch && (
+                    <span className="field-error">Senhas não conferem</span>
+                  )}
+                </div>
+
+                {password.length > 0 && (
+                  <ul className="password-hints">
+                    {PASSWORD_RULES.map((rule) => (
+                      <li key={rule.label} className={rule.test(password) ? 'hint-ok' : 'hint-fail'}>
+                        {rule.test(password) ? '\u2713' : '\u2717'} {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
             <button
               type="button"
               className="activate-button"
-              disabled={activateMutation.isPending}
+              disabled={activateMutation.isPending || !canSubmit}
               onClick={() => activateMutation.mutate()}
             >
               {activateMutation.isPending ? (
                 <span className="activate-spinner" />
+              ) : needsPassword ? (
+                'Definir senha e ativar'
               ) : (
                 'Ativar minha conta'
               )}
@@ -302,6 +365,24 @@ const activateStyles = `
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .password-hints {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+  }
+
+  .password-hints .hint-ok {
+    color: #4ade80;
+  }
+
+  .password-hints .hint-fail {
     color: #94a3b8;
   }
 

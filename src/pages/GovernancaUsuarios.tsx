@@ -4,10 +4,9 @@ import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { useTenantCompany } from '@/hooks/useTenantCompany';
-import { isPasswordValid } from '@/lib/passwordValidation';
-import { PasswordHints } from '@/components/ui/password-hints';
 import { AccessDenied } from '@/components/governance/AccessDenied';
-import type { CreateUserRequest, ProfileListItemDto, UpdateUserRequest, UserListItemDto } from '@/types/api';
+import { CreateUserDialog } from '@/components/shared/CreateUserDialog';
+import type { ProfileListItemDto, UpdateUserRequest, UserListItemDto } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -22,7 +21,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -46,7 +44,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { UserPlus, Loader2, Pencil, Trash2, KeyRound } from 'lucide-react';
 
 export default function GovernancaUsuarios() {
   const {
@@ -61,12 +59,6 @@ export default function GovernancaUsuarios() {
   const { companies } = useTenantCompany();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [password, setPassword] = useState('');
-  const [profileId, setProfileId] = useState('');
-  const [companyId, setCompanyId] = useState<string>('');
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserListItemDto | null>(null);
@@ -91,33 +83,6 @@ export default function GovernancaUsuarios() {
       return data;
     },
     enabled: canManageUsers,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (body: CreateUserRequest) => {
-      const { data } = await api.post<UserListItemDto>('/users', body);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setOpen(false);
-      setEmail('');
-      setFullName('');
-      setPassword('');
-      setProfileId('');
-      setCompanyId('');
-      toast({
-        title: 'Usuário criado',
-        description: 'O cadastro foi enviado. O usuário receberá o e-mail para ativar a conta, se o envio estiver configurado.',
-      });
-    },
-    onError: (err: unknown) => {
-      toast({
-        title: 'Não foi possível criar o usuário',
-        description: getApiErrorMessage(err, 'Verifique os dados e tente novamente.'),
-        variant: 'destructive',
-      });
-    },
   });
 
   const updateMutation = useMutation({
@@ -174,50 +139,26 @@ export default function GovernancaUsuarios() {
     },
   });
 
-  const activeProfiles = (profilesQuery.data ?? []).filter((p) => p.isActive);
+  const resetPasswordMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/users/${id}/reset-password`),
+    onSuccess: () => {
+      toast({
+        title: 'Email enviado',
+        description: 'O usuário receberá um link para redefinir a senha.',
+      });
+    },
+    onError: (err: unknown) => {
+      toast({
+        title: 'Erro ao redefinir senha',
+        description: getApiErrorMessage(err),
+        variant: 'destructive',
+      });
+    },
+  });
 
   const profilesForEdit = (profilesQuery.data ?? []).filter(
     (p) => p.isActive || p.id === editingUser?.profile.id,
   );
-
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedName = fullName.trim();
-    const trimmedEmail = email.trim();
-    if (trimmedName.length < 2) {
-      toast({ title: 'Nome inválido', description: 'Informe pelo menos 2 caracteres.', variant: 'destructive' });
-      return;
-    }
-    if (!profileId) {
-      toast({ title: 'Perfil obrigatório', description: 'Selecione um perfil de acesso.', variant: 'destructive' });
-      return;
-    }
-    const trimmedPassword = password.trim();
-    if (!trimmedPassword) {
-      toast({
-        title: 'Senha obrigatória',
-        description: 'Informe uma senha com pelo menos 6 caracteres para o novo usuário.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (trimmedPassword.length < 6) {
-      toast({
-        title: 'Senha inválida',
-        description: 'A senha deve ter pelo menos 6 caracteres.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const body: CreateUserRequest = {
-      email: trimmedEmail,
-      fullName: trimmedName,
-      profileId,
-      password: trimmedPassword,
-      ...(companyId ? { companyId } : {}),
-    };
-    createMutation.mutate(body);
-  };
 
   const openEdit = (u: UserListItemDto) => {
     setEditingUser(u);
@@ -296,110 +237,17 @@ export default function GovernancaUsuarios() {
           </p>
         </div>
         {canCreateUsers ? (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
+          <CreateUserDialog
+            trigger={
               <Button size="sm" className="gap-2 shrink-0">
                 <UserPlus className="h-4 w-4" />
                 Novo usuário
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Novo usuário</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4 mt-2">
-                <div className="space-y-2">
-                  <Label htmlFor="gu-fullName">Nome completo</Label>
-                  <Input
-                    id="gu-fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Nome e sobrenome"
-                    minLength={2}
-                    maxLength={255}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gu-email">E-mail</Label>
-                  <Input
-                    id="gu-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="usuario@empresa.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gu-password">
-                    Senha <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="gu-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min. 8 caracteres"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                    aria-required
-                  />
-                  <PasswordHints password={password} />
-                  <p className="text-xs text-muted-foreground">Obrigatória. O usuário poderá alterá-la ao ativar o convite.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Perfil</Label>
-                  <Select value={profileId || undefined} onValueChange={setProfileId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder={profilesQuery.isLoading ? 'Carregando perfis…' : 'Selecione o perfil'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeProfiles.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                          {p.isDefault ? ' (padrão)' : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {companies && companies.length > 0 ? (
-                  <div className="space-y-2">
-                    <Label>Empresa (opcional)</Label>
-                    <Select value={companyId || '__none__'} onValueChange={(v) => setCompanyId(v === '__none__' ? '' : v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Nenhuma" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Nenhuma</SelectItem>
-                        {companies.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createMutation.isPending || !isPasswordValid(password)}
-                >
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Salvando…
-                    </>
-                  ) : (
-                    'Cadastrar'
-                  )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+            }
+            profiles={profilesQuery.data ?? []}
+            profilesLoading={profilesQuery.isLoading}
+            invalidateKeys={[['users']]}
+          />
         ) : null}
       </div>
 
@@ -536,6 +384,37 @@ export default function GovernancaUsuarios() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                      ) : null}
+                      {canUpdateUsers ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              title="Redefinir senha"
+                              disabled={resetPasswordMutation.isPending}
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Redefinir senha de "{u.fullName}"?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Um e-mail será enviado para {u.email} com um link para definir uma nova senha.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => resetPasswordMutation.mutate(u.id)}
+                              >
+                                Enviar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       ) : null}
                       {canDeleteUsers ? (
                         <AlertDialog>

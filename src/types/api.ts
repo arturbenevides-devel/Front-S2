@@ -2,6 +2,7 @@ export interface ValidateResetTokenResponse {
   userId: string;
   email: string;
   firstAccess: boolean;
+  hasPassword: boolean;
 }
 
 export interface AuthorizedMenuDto {

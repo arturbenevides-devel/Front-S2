@@ -19,9 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
-import { isPasswordValid } from '@/lib/passwordValidation';
-import { PasswordHints } from '@/components/ui/password-hints';
-import type { UserListItemDto, ProfileListItemDto, CreateUserRequest } from '@/types/api';
+import { CreateUserDialog } from '@/components/shared/CreateUserDialog';
+import type { UserListItemDto, ProfileListItemDto } from '@/types/api';
 
 interface TeamMember {
   id: string;
@@ -178,37 +177,6 @@ export function AdminPanel({ gamificationEnabled = true, onGamificationToggle }:
     .filter((p) => p.isActive)
     .sort((a, b) => (profileOrder[a.name] ?? 99) - (profileOrder[b.name] ?? 99));
   const supervisorUsers = allUsers.filter((u) => u.profile?.name === 'Supervisor' && u.isActive);
-
-  // ── Create User ──
-  const [showCreateUser, setShowCreateUser] = useState(false);
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserProfileId, setNewUserProfileId] = useState('');
-
-  const createUserMutation = useMutation({
-    mutationFn: async () => {
-      const body: CreateUserRequest = {
-        fullName: newUserName,
-        email: newUserEmail,
-        password: newUserPassword,
-        profileId: newUserProfileId,
-      };
-      const { data } = await api.post('/users', body);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users-for-teams'] });
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      setNewUserName('');
-      setNewUserEmail('');
-      setNewUserPassword('');
-      setNewUserProfileId('');
-      setShowCreateUser(false);
-      toast({ title: 'Usuário criado com sucesso' });
-    },
-    onError: () => toast({ title: 'Erro ao criar usuário', variant: 'destructive' }),
-  });
 
   // Team CRUD state
   const [showCreateTeam, setShowCreateTeam] = useState(false);
@@ -509,10 +477,17 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
             <h2 className="text-lg font-semibold">Equipes</h2>
             <div className="flex gap-2">
               {canCreateUsers && (
-                <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowCreateUser(true)}>
-                  <UserPlus className="h-4 w-4" />
-                  Novo Usuário
-                </Button>
+                <CreateUserDialog
+                  trigger={
+                    <Button size="sm" variant="outline" className="gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Novo Usuário
+                    </Button>
+                  }
+                  profiles={profiles}
+                  profilesLoading={profilesQuery.isLoading}
+                  invalidateKeys={[['users-for-teams'], ['teams']]}
+                />
               )}
               {canCreateTeams && (
                 <Button size="sm" className="gap-2" onClick={() => setShowCreateTeam(true)}>
@@ -522,49 +497,6 @@ Forneça respostas curtas e diretas, adequadas para WhatsApp.`,
               )}
             </div>
           </div>
-
-          {/* Create User Dialog */}
-          <Dialog open={showCreateUser} onOpenChange={setShowCreateUser}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo Usuário</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-2">
-                <div className="space-y-2">
-                  <Label>Nome completo</Label>
-                  <Input value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="Nome completo" />
-                </div>
-                <div className="space-y-2">
-                  <Label>E-mail</Label>
-                  <Input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="email@empresa.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Senha</Label>
-                  <Input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Min. 8 caracteres" />
-                  <PasswordHints password={newUserPassword} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Perfil de Acesso</Label>
-                  <Select value={newUserProfileId} onValueChange={setNewUserProfileId}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar perfil..." /></SelectTrigger>
-                    <SelectContent>
-                      {activeProfiles.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={!newUserName.trim() || !newUserEmail.trim() || !isPasswordValid(newUserPassword) || !newUserProfileId || createUserMutation.isPending}
-                  onClick={() => createUserMutation.mutate()}
-                >
-                  {createUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Criar Usuário
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
 
           {/* Create Team Form */}
           {showCreateTeam && canCreateTeams && (
