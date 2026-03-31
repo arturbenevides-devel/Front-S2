@@ -115,7 +115,7 @@ export function CreateUserDialog({
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Nome e sobrenome"
               minLength={2}
-              maxLength={255}
+              maxLength={120}
               required
             />
           </div>
@@ -127,6 +127,7 @@ export function CreateUserDialog({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="usuario@empresa.com"
+              maxLength={254}
               required
             />
           </div>

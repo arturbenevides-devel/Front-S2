@@ -272,7 +272,7 @@ export default function GovernancaUsuarios() {
                   onChange={(e) => setEditFullName(e.target.value)}
                   placeholder="Nome e sobrenome"
                   minLength={2}
-                  maxLength={255}
+                  maxLength={120}
                   required
                 />
               </div>
@@ -283,6 +283,7 @@ export default function GovernancaUsuarios() {
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
+                  maxLength={254}
                   required
                 />
               </div>
