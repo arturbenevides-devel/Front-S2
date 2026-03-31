@@ -137,6 +137,7 @@ const Login = () => {
               'Entrar'
             )}
           </button>
+
         </form>
 
         <div className="login-footer">
@@ -156,6 +157,12 @@ const Login = () => {
             </button>
           )}
         </div>
+
+        {!isOwnerMode && (
+          <div className="login-forgot">
+            <Link to="/forgot-password" className="login-link">Esqueci minha senha</Link>
+          </div>
+        )}
 
         <div className="login-admin-toggle">
           {!isOwnerMode && (
@@ -318,6 +325,12 @@ const Login = () => {
 
         .login-link:hover {
           color: #a5b4fc;
+        }
+
+        .login-forgot {
+          text-align: center;
+          margin-top: 0.75rem;
+          font-size: 0.85rem;
         }
 
         .login-admin-toggle {
