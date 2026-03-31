@@ -27,6 +27,8 @@ export default function ActivateAccount() {
   );
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const cnpjDigits = useMemo(() => cnpjMasked.replace(/\D/g, ''), [cnpjMasked]);
 
@@ -193,25 +195,43 @@ export default function ActivateAccount() {
               <>
                 <div className="form-group">
                   <label htmlFor="act-password">Senha</label>
-                  <input
-                    id="act-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Crie sua senha"
-                    autoFocus
-                  />
+                  <div className="input-password-wrapper">
+                    <input
+                      id="act-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Crie sua senha"
+                      autoFocus
+                    />
+                    <button type="button" className="password-toggle" onClick={() => setShowPassword((v) => !v)} tabIndex={-1}>
+                      {showPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="act-password-confirm">Confirmar senha</label>
-                  <input
-                    id="act-password-confirm"
-                    type="password"
-                    value={passwordConfirmation}
-                    onChange={(e) => setPasswordConfirmation(e.target.value)}
-                    placeholder="Repita a senha"
-                  />
+                  <div className="input-password-wrapper">
+                    <input
+                      id="act-password-confirm"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={passwordConfirmation}
+                      onChange={(e) => setPasswordConfirmation(e.target.value)}
+                      placeholder="Repita a senha"
+                    />
+                    <button type="button" className="password-toggle" onClick={() => setShowConfirmPassword((v) => !v)} tabIndex={-1}>
+                      {showConfirmPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      )}
+                    </button>
+                  </div>
                   {passwordConfirmation.length > 0 && !passwordsMatch && (
                     <span className="field-error">Senhas não conferem</span>
                   )}
@@ -445,5 +465,33 @@ const activateStyles = `
 
   .activate-link:hover {
     color: #a5b4fc;
+  }
+
+  .input-password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-password-wrapper input {
+    width: 100%;
+    padding-right: 2.75rem;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    color: #818cf8;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .password-toggle:hover {
+    opacity: 1;
   }
 `;
