@@ -116,9 +116,11 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        <div className="fp-footer">
-          <Link to="/login" className="fp-link">Voltar ao login</Link>
-        </div>
+        {!sent && (
+          <div className="fp-footer">
+            <Link to="/login" className="fp-link">Voltar ao login</Link>
+          </div>
+        )}
       </div>
 
       <style>{`

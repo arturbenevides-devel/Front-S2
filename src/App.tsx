@@ -16,6 +16,7 @@ import GovernancaEmpresa from "./pages/GovernancaEmpresa";
 import GovernancaAuditoria from "./pages/GovernancaAuditoria";
 import ActivateAccount from "./pages/ActivateAccount";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import OwnerDashboard from "./pages/OwnerDashboard";
 
 function LegacyNewPasswordRedirect() {
@@ -120,6 +121,14 @@ const App = () => (
               element={
                 <PublicRoute>
                   <ForgotPassword />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/reset-password/:token"
+              element={
+                <PublicRoute>
+                  <ResetPassword />
                 </PublicRoute>
               }
             />
