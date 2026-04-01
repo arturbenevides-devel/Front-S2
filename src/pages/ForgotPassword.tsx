@@ -64,7 +64,7 @@ const ForgotPassword = () => {
               </svg>
             </div>
             <p className="fp-success-text">
-              Se o email estiver cadastrado, você receberá um link para redefinir sua senha. O link expira em 2 horas.
+              Se os dados informados estiverem corretos, você receberá um link para redefinir sua senha. O link expira em 2 horas.
             </p>
             <Link to="/login" className="fp-button">
               Voltar ao login

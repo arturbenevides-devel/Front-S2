@@ -75,6 +75,10 @@ const ResetPassword = () => {
   };
 
   const isError = validateQuery.isError || (!validateQuery.isLoading && !validateQuery.data);
+  const errorMessage = validateQuery.error
+    ? getApiErrorMessage(validateQuery.error, '')
+    : '';
+  const isExpired = errorMessage.toLowerCase().includes('expirad');
 
   return (
     <div className="rp-container">
@@ -92,9 +96,21 @@ const ResetPassword = () => {
               </defs>
             </svg>
           </div>
-          <h1>{resetMutation.isSuccess ? 'Senha redefinida' : 'Redefinir senha'}</h1>
+          <h1>
+            {isError && isExpired
+              ? 'Link expirado'
+              : isError
+              ? 'Link inválido'
+              : resetMutation.isSuccess
+              ? 'Senha redefinida'
+              : 'Redefinir senha'}
+          </h1>
           <p>
-            {resetMutation.isSuccess
+            {isError && isExpired
+              ? 'O link de redefinição de senha expirou.'
+              : isError
+              ? 'Não foi possível validar este link.'
+              : resetMutation.isSuccess
               ? 'Sua senha foi alterada com sucesso.'
               : 'Crie uma nova senha para acessar sua conta.'}
           </p>
@@ -106,9 +122,18 @@ const ResetPassword = () => {
             Validando link…
           </div>
         ) : isError ? (
-          <div className="rp-error">
-            <p>Link inválido ou expirado.</p>
+          <div className="rp-expired">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <p className="rp-expired-text">
+              {isExpired
+                ? 'O link de redefinição expirou. Por segurança, os links são válidos por apenas 2 horas. Solicite um novo link abaixo.'
+                : 'Este link não é válido. Ele pode já ter sido utilizado ou o endereço está incorreto.'}
+            </p>
             <Link to="/forgot-password" className="rp-button">Solicitar novo link</Link>
+            <Link to="/login" className="rp-link" style={{ marginTop: '0.75rem', display: 'block', textAlign: 'center' }}>Voltar ao login</Link>
           </div>
         ) : resetMutation.isSuccess ? (
           <div className="rp-success">
@@ -393,15 +418,32 @@ const rpStyles = `
     padding: 2rem 0;
   }
 
-  .rp-error {
-    text-align: center;
+  .rp-expired {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
     padding: 1rem 0;
   }
 
-  .rp-error p {
-    color: #f87171;
+  .rp-expired-text {
     font-size: 0.9rem;
-    margin: 0 0 1.25rem;
+    color: #94a3b8;
+    text-align: center;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .rp-link {
+    color: #818cf8;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+  }
+
+  .rp-link:hover {
+    color: #a5b4fc;
   }
 
   .rp-success {

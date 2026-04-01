@@ -124,14 +124,7 @@ const App = () => (
                 </PublicRoute>
               }
             />
-            <Route
-              path="/reset-password/:token"
-              element={
-                <PublicRoute>
-                  <ResetPassword />
-                </PublicRoute>
-              }
-            />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route
               path="/activate/:token"
               element={

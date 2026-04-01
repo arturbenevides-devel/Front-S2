@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import { formatCnpjDisplay } from '@/lib/formatCnpj';
 import type { CompanyDto } from '@/types/api';
 
-/** Dados da empresa no schema do tenant (white-label básico: nome + CNPJ exibidos na UI). */
+/** Dados da empresa do tenant (nome + CNPJ exibidos na UI). */
 export function useTenantCompany() {
   const { user, tenantCnpj, token, isAuthenticated } = useAuth();
 
