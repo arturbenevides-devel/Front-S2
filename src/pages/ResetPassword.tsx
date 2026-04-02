@@ -78,7 +78,8 @@ const ResetPassword = () => {
   const errorMessage = validateQuery.error
     ? getApiErrorMessage(validateQuery.error, '')
     : '';
-  const isExpired = errorMessage.toLowerCase().includes('expirad');
+  const isExpired = errorMessage.toLowerCase().includes('expirou');
+  const isUsed = errorMessage.toLowerCase().includes('utilizado');
 
   return (
     <div className="rp-container">
@@ -97,7 +98,9 @@ const ResetPassword = () => {
             </svg>
           </div>
           <h1>
-            {isError && isExpired
+            {isError && isUsed
+              ? 'Link já utilizado'
+              : isError && isExpired
               ? 'Link expirado'
               : isError
               ? 'Link inválido'
@@ -106,7 +109,9 @@ const ResetPassword = () => {
               : 'Redefinir senha'}
           </h1>
           <p>
-            {isError && isExpired
+            {isError && isUsed
+              ? 'Este link de redefinição já foi utilizado.'
+              : isError && isExpired
               ? 'O link de redefinição de senha expirou.'
               : isError
               ? 'Não foi possível validar este link.'
@@ -123,14 +128,24 @@ const ResetPassword = () => {
           </div>
         ) : isError ? (
           <div className="rp-expired">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
+            {isUsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            )}
             <p className="rp-expired-text">
-              {isExpired
+              {isUsed
+                ? 'Este link já foi utilizado para redefinir a senha. Cada link pode ser usado apenas uma vez. Solicite um novo link abaixo caso precise.'
+                : isExpired
                 ? 'O link de redefinição expirou. Por segurança, os links são válidos por apenas 2 horas. Solicite um novo link abaixo.'
-                : 'Este link não é válido. Ele pode já ter sido utilizado ou o endereço está incorreto.'}
+                : 'Este link não é válido. O endereço pode estar incorreto.'}
             </p>
             <Link to="/forgot-password" className="rp-button">Solicitar novo link</Link>
             <Link to="/login" className="rp-link" style={{ marginTop: '0.75rem', display: 'block', textAlign: 'center' }}>Voltar ao login</Link>
